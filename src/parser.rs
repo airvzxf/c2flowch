@@ -99,11 +99,11 @@ impl C2Flowch {
 
         while let Some((i, c)) = chars.next() {
             if c == '%' {
-                if let Some(&(_, next_c)) = chars.peek() {
-                    if next_c == '%' {
-                        chars.next();
-                        continue;
-                    }
+                if let Some(&(_, next_c)) = chars.peek()
+                    && next_c == '%'
+                {
+                    chars.next();
+                    continue;
                 }
 
                 // Found specifier

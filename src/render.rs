@@ -360,7 +360,17 @@ impl AsciiRenderer {
                 let c = self.canvas[y][x];
                 let is_line = matches!(
                     c,
-                    '│' | '─' | '┌' | '┐' | '└' | '┘' | '├' | '┤' | '┬' | '┴' | '┼' | '🭬'
+                    '│' | '─'
+                        | '┌'
+                        | '┐'
+                        | '└'
+                        | '┘'
+                        | '├'
+                        | '┤'
+                        | '┬'
+                        | '┴'
+                        | '┼'
+                        | '🭬'
                 );
                 if !is_line {
                     continue;
@@ -373,25 +383,29 @@ impl AsciiRenderer {
 
                 if y > 0 {
                     let cu = self.canvas[y - 1][x];
-                    if matches!(cu, '│' | '┌' | '┐' | '├' | '┤' | '┬' | '┼' | '🭬') {
+                    if matches!(cu, '│' | '┌' | '┐' | '├' | '┤' | '┬' | '┼' | '🭬')
+                    {
                         up = true;
                     }
                 }
                 if y < height - 1 {
                     let cd = self.canvas[y + 1][x];
-                    if matches!(cd, '│' | '└' | '┘' | '├' | '┤' | '┴' | '┼' | '🭬' | '🭭') {
+                    if matches!(cd, '│' | '└' | '┘' | '├' | '┤' | '┴' | '┼' | '🭬' | '🭭')
+                    {
                         down = true;
                     }
                 }
                 if x > 0 {
                     let cl = self.canvas[y][x - 1];
-                    if matches!(cl, '─' | '┌' | '└' | '├' | '┬' | '┴' | '┼' | '🭬') {
+                    if matches!(cl, '─' | '┌' | '└' | '├' | '┬' | '┴' | '┼' | '🭬')
+                    {
                         left = true;
                     }
                 }
                 if x < width - 1 {
                     let cr = self.canvas[y][x + 1];
-                    if matches!(cr, '─' | '┐' | '┘' | '┤' | '┬' | '┴' | '┼' | '🭬') {
+                    if matches!(cr, '─' | '┐' | '┘' | '┤' | '┬' | '┴' | '┼' | '🭬')
+                    {
                         right = true;
                     }
                 }
@@ -548,10 +562,10 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 let mut max_y = *lane_y.get(&dim.lane).unwrap_or(&0);
 
                 for p in ready_parents {
-                    if let Some((_, py)) = processed_nodes.get(&p.from) {
-                        if *py + 8 > max_y {
-                            max_y = *py + 8;
-                        }
+                    if let Some((_, py)) = processed_nodes.get(&p.from)
+                        && *py + 8 > max_y
+                    {
+                        max_y = *py + 8;
                     }
                 }
 
@@ -584,9 +598,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
         match node.node_type {
             NodeType::Terminator => renderer.draw_rounded_box(*x, *y, dim.w, dim.h, &node.text),
             NodeType::Decision => renderer.draw_rhombus(*x, *y, dim.w, dim.h, &node.text),
-            NodeType::InputOutput => {
-                renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text)
-            }
+            NodeType::InputOutput => renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text),
             _ => renderer.draw_box(*x, *y, dim.w, dim.h, &node.text),
         }
     }
