@@ -1,0 +1,96 @@
+mod ir;
+mod parser;
+mod render;
+
+use crate::ir::Flowchart;
+use crate::parser::C2Flowch;
+use crate::render::render_flowchart;
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[command(name = "c2flowch")]
+#[command(about = "Convert C source code into ANSI flowcharts", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Parse C code and generate an intermediate YAML representation
+    Parse {
+        /// The C source file to parse
+        input: PathBuf,
+        /// The output YAML file (defaults to input.yaml)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Level of detail (1-5)
+        #[arg(short, long, default_value_t = 3)]
+        level: u8,
+    },
+    /// Render a flowchart from an intermediate YAML representation
+    Render {
+        /// The YAML file to render
+        input: PathBuf,
+        /// The output file (optional)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Format (ascii, svg)
+        #[arg(short, long, default_value = "ascii")]
+        format: String,
+    },
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Parse {
+            input,
+            output,
+            level,
+        } => {
+            println!("Parsing {:?} with detail level {}...", input, level);
+            let flowchart = C2Flowch::parse_file(&input, level)?;
+            let yaml = flowchart.to_yaml()?;
+
+            let output_path = output.unwrap_or_else(|| {
+                let mut p = input.clone();
+                p.set_extension("yaml");
+                p
+            });
+
+            fs::write(&output_path, yaml)?;
+            println!(
+                "Success! Intermediate representation saved to {:?}",
+                output_path
+            );
+        }
+        Commands::Render {
+            input,
+            output,
+            format,
+        } => {
+            println!("Rendering {:?} as {}...", input, format);
+            let yaml = fs::read_to_string(&input)?;
+            let flowchart = Flowchart::from_yaml(&yaml)?;
+
+            if format == "ascii" {
+                let result = render_flowchart(&flowchart)?;
+                if let Some(out_path) = output {
+                    fs::write(&out_path, &result)?;
+                    println!("Diagram saved to {:?}", out_path);
+                } else {
+                    println!("{}", result);
+                }
+            } else {
+                return Err(anyhow::anyhow!("Format {} not supported yet", format));
+            }
+        }
+    }
+
+    Ok(())
+}
