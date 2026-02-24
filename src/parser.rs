@@ -202,22 +202,43 @@ impl C2Flowch {
 
         cleaned = cleaned.replace(";", "").trim().to_string();
 
-        if cleaned.contains("printf(") {
-            let start = cleaned.find("printf(").unwrap();
-            // Ensure we don't panic if string slice is invalid or empty
-            if cleaned.len() > start + 7 {
-                let inner = &cleaned[start + 7..cleaned.len() - 1];
-                return Self::process_printf(inner);
+        let io_output = ["printf(", "puts(", "fputs(", "putchar("];
+        let io_input = ["scanf(", "gets(", "fgets(", "getchar("];
+
+        for &call in &io_output {
+            if let Some(start) = cleaned.find(call) {
+                if cleaned.len() > start + call.len() {
+                    let inner = &cleaned[start + call.len()..cleaned.len() - 1];
+                    if call == "printf(" {
+                        return Self::process_printf(inner);
+                    }
+                    let args = Self::split_args(inner);
+                    if !args.is_empty() {
+                        return format!("Imprimir {}", args[0]);
+                    }
+                }
+                return "Imprimir".to_string();
             }
-            return "Imprimir".to_string();
-        } else if cleaned.contains("scanf(") {
-            let start = cleaned.find("scanf(").unwrap();
-            let inner = &cleaned[start + 6..cleaned.len() - 1];
-            if let Some(comma_pos) = inner.find(',') {
-                let var = inner[comma_pos + 1..].trim().replace("&", "");
-                return format!("Leer {}", var);
+        }
+
+        for &call in &io_input {
+            if let Some(start) = cleaned.find(call) {
+                if cleaned.len() > start + call.len() {
+                    let inner = &cleaned[start + call.len()..cleaned.len() - 1];
+                    if call == "scanf(" {
+                        if let Some(comma_pos) = inner.find(',') {
+                            let var = inner[comma_pos + 1..].trim().replace("&", "");
+                            return format!("Leer {}", var);
+                        }
+                        return "Leer".to_string();
+                    }
+                    let args = Self::split_args(inner);
+                    if !args.is_empty() {
+                        return format!("Leer {}", args[0].replace("&", ""));
+                    }
+                }
+                return "Leer".to_string();
             }
-            return "Leer".to_string();
         }
 
         if cleaned.contains("=") && !cleaned.contains("==") {
@@ -473,7 +494,14 @@ impl C2Flowch {
     fn is_io(&self, node: Node, code: &str) -> bool {
         if node.kind() == "expression_statement" {
             let text = &code[node.start_byte()..node.end_byte()];
-            text.contains("printf(") || text.contains("scanf(")
+            text.contains("printf(")
+                || text.contains("scanf(")
+                || text.contains("puts(")
+                || text.contains("gets(")
+                || text.contains("fputs(")
+                || text.contains("fgets(")
+                || text.contains("putchar(")
+                || text.contains("getchar(")
         } else {
             false
         }
@@ -483,7 +511,14 @@ impl C2Flowch {
         match node.kind() {
             "expression_statement" => {
                 let text = &code[node.start_byte()..node.end_byte()];
-                !text.contains("printf(") && !text.contains("scanf(")
+                !text.contains("printf(")
+                    && !text.contains("scanf(")
+                    && !text.contains("puts(")
+                    && !text.contains("gets(")
+                    && !text.contains("fputs(")
+                    && !text.contains("fgets(")
+                    && !text.contains("putchar(")
+                    && !text.contains("getchar(")
             }
             "declaration" => {
                 let text = &code[node.start_byte()..node.end_byte()];
@@ -508,5 +543,20 @@ mod tests {
     fn test_process_printf_basic() {
         let res = C2Flowch::process_printf("\"Value: %d\", x");
         assert_eq!(res, "Imprimir \"Value: \", x");
+    }
+
+    #[test]
+    fn test_clean_text_io() {
+        assert_eq!(
+            C2Flowch::clean_text("puts(\"Hello\");"),
+            "Imprimir \"Hello\""
+        );
+        assert_eq!(
+            C2Flowch::clean_text("fputs(\"World\", stdout);"),
+            "Imprimir \"World\""
+        );
+        assert_eq!(C2Flowch::clean_text("putchar('A');"), "Imprimir 'A'");
+        assert_eq!(C2Flowch::clean_text("gets(buf);"), "Leer buf");
+        assert_eq!(C2Flowch::clean_text("fgets(buf, 10, stdin);"), "Leer buf");
     }
 }
