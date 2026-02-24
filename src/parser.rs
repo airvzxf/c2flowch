@@ -145,6 +145,10 @@ impl C2Flowch {
             }
         }
 
+        if parts.is_empty() {
+            parts.push("\"\"".to_string());
+        }
+
         format!("Imprimir {}", parts.join(", "))
     }
 

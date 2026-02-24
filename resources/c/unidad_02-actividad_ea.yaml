@@ -6,7 +6,13 @@ nodes:
   source_line: null
 - id: node_2
   node_type: InputOutput
-  text: "Imprimir \"# ======================================================== #\"\nImprimir \"# Alumno: Israel Alberto Roldan Vega                       #\"\nImprimir \"# Matrícula: ES251105693                                   #\"\nImprimir \"# Grupo: DS-DFPR-2601-B1-022                               #\"\nImprimir \"# ======================================================== #\"\nImprimir "
+  text: |-
+    Imprimir "# ======================================================== #"
+    Imprimir "# Alumno: Israel Alberto Roldan Vega                       #"
+    Imprimir "# Matrícula: ES251105693                                   #"
+    Imprimir "# Grupo: DS-DFPR-2601-B1-022                               #"
+    Imprimir "# ======================================================== #"
+    Imprimir ""
   source_line: 5
 - id: node_3
   node_type: InputOutput
@@ -72,7 +78,17 @@ nodes:
   source_line: 51
 - id: node_14
   node_type: InputOutput
-  text: "Imprimir \"» Tarifa \", tarifa_tipo, \" de $\", tarifa, \" por kWh\"\nImprimir \nImprimir \"-------------------------------------------\"\nImprimir \"| FACTURA GENERADA                        |\"\nImprimir \"-------------------------------------------\"\nImprimir \"| Cliente: \", cliente\nImprimir \"| Consumo: \", consumo, \" kWh\"\nImprimir \"| Tarifa: \", tarifa_tipo\nImprimir \"| Total a pagar: $\", PAGO\nImprimir \"-------------------------------------------\""
+  text: |-
+    Imprimir "» Tarifa ", tarifa_tipo, " de $", tarifa, " por kWh"
+    Imprimir ""
+    Imprimir "-------------------------------------------"
+    Imprimir "| FACTURA GENERADA                        |"
+    Imprimir "-------------------------------------------"
+    Imprimir "| Cliente: ", cliente
+    Imprimir "| Consumo: ", consumo, " kWh"
+    Imprimir "| Tarifa: ", tarifa_tipo
+    Imprimir "| Total a pagar: $", PAGO
+    Imprimir "-------------------------------------------"
   source_line: 53
 - id: node_15
   node_type: Decision
@@ -96,7 +112,7 @@ nodes:
   source_line: null
 - id: node_20
   node_type: InputOutput
-  text: 'Imprimir '
+  text: Imprimir ""
   source_line: 70
 - id: node_21
   node_type: Decision

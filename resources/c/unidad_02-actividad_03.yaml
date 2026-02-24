@@ -6,7 +6,13 @@ nodes:
   source_line: null
 - id: node_2
   node_type: InputOutput
-  text: "Imprimir \"# ======================================================== #\"\nImprimir \"# Alumno: Israel Alberto Roldan Vega                       #\"\nImprimir \"# Matrícula: ES251105693                                   #\"\nImprimir \"# Grupo: DS-DFPR-2601-B1-022                               #\"\nImprimir \"# ======================================================== #\"\nImprimir "
+  text: |-
+    Imprimir "# ======================================================== #"
+    Imprimir "# Alumno: Israel Alberto Roldan Vega                       #"
+    Imprimir "# Matrícula: ES251105693                                   #"
+    Imprimir "# Grupo: DS-DFPR-2601-B1-022                               #"
+    Imprimir "# ======================================================== #"
+    Imprimir ""
   source_line: 5
 - id: node_3
   node_type: InputOutput
@@ -98,7 +104,7 @@ nodes:
   source_line: null
 - id: node_22
   node_type: InputOutput
-  text: 'Imprimir '
+  text: Imprimir ""
   source_line: 79
 - id: node_23
   node_type: Decision

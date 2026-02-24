@@ -14,11 +14,26 @@ nodes:
   source_line: 15
 - id: node_4
   node_type: InputOutput
-  text: "Imprimir \"# ======================================================== #\"\nImprimir \"# Alumno: Israel Alberto Roldan Vega                       #\"\nImprimir \"# Matrícula: ES251105693                                   #\"\nImprimir \"# Grupo: DS-DFPR-2601-B1-022                               #\"\nImprimir \"# ======================================================== #\"\nImprimir \nImprimir \"=== Cotizador: Pinturas Rápidas ===\"\nImprimir \"Tarifa por m2: $150.00\"\nImprimir "
+  text: |-
+    Imprimir "# ======================================================== #"
+    Imprimir "# Alumno: Israel Alberto Roldan Vega                       #"
+    Imprimir "# Matrícula: ES251105693                                   #"
+    Imprimir "# Grupo: DS-DFPR-2601-B1-022                               #"
+    Imprimir "# ======================================================== #"
+    Imprimir ""
+    Imprimir "=== Cotizador: Pinturas Rápidas ==="
+    Imprimir "Tarifa por m2: $150.00"
+    Imprimir ""
   source_line: 21
 - id: node_5
   node_type: InputOutput
-  text: "Imprimir \"Ingrese los siguientes datos.\"\nImprimir \"Base de la pared (metros): \"\nLeer base\nImprimir \"Altura de la pared (metros): \"\nLeer altura\nImprimir "
+  text: |-
+    Imprimir "Ingrese los siguientes datos."
+    Imprimir "Base de la pared (metros): "
+    Leer base
+    Imprimir "Altura de la pared (metros): "
+    Leer altura
+    Imprimir ""
   source_line: 35
 - id: node_6
   node_type: Process
@@ -28,7 +43,13 @@ nodes:
   source_line: 43
 - id: node_7
   node_type: InputOutput
-  text: "Imprimir \"--- Recibo del presupuesto ---\"\nImprimir \"Medidas: \", base, \" m x \", altura, \" m\"\nImprimir \"Area total: \", AREA, \" m2\"\nImprimir \"------------------------------\"\nImprimir \"Total con IVA: $\", PRESUPUESTO, \" MXN\"\nImprimir "
+  text: |-
+    Imprimir "--- Recibo del presupuesto ---"
+    Imprimir "Medidas: ", base, " m x ", altura, " m"
+    Imprimir "Area total: ", AREA, " m2"
+    Imprimir "------------------------------"
+    Imprimir "Total con IVA: $", PRESUPUESTO, " MXN"
+    Imprimir ""
   source_line: 48
 - id: node_8
   node_type: Terminator
