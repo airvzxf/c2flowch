@@ -33,7 +33,7 @@ impl AsciiRenderer {
     }
 
     fn set_char(&mut self, x: usize, y: usize, c: char, cell_type: CellType) {
-        if x < self.width && y < self.height {
+        if x < self.width && y < self.height && self.occupancy[y][x] != CellType::Node {
             self.canvas[y][x] = c;
             self.occupancy[y][x] = cell_type;
         }
@@ -288,10 +288,11 @@ impl AsciiRenderer {
         x2: usize,
         y2: usize,
         label: Option<&str>,
+        arrow: bool,
     ) {
         self.draw_horizontal_right_line(x1, x2, y1, label);
         self.set_char_force(x2, y1, '┐', CellType::LineCorner);
-        self.draw_vertical_line(x2, y1 + 1, y2, true, None);
+        self.draw_vertical_line(x2, y1 + 1, y2, arrow, None);
     }
 
     pub fn draw_merge_left(
@@ -302,14 +303,29 @@ impl AsciiRenderer {
         y_end: usize,
     ) {
         let turn_y = y_end;
-        self.draw_vertical_line(x_node, y_start, turn_y, false, None);
-        self.set_char_force(x_node, turn_y, '┘', CellType::LineCorner);
-        for x in (x_target..x_node).rev() {
-            self.set_char(x, turn_y, '─', CellType::LineH);
+        if x_node == x_target {
+            self.draw_vertical_line(x_node, y_start, turn_y, false, None);
+            return;
         }
-        self.set_char_force(x_target, turn_y, '┤', CellType::LineCorner);
+        self.draw_vertical_line(x_node, y_start, turn_y, false, None);
+        if x_target < x_node {
+            self.set_char_force(x_node, turn_y, '┘', CellType::LineCorner);
+            for x in (x_target + 2..x_node).rev() {
+                self.set_char(x, turn_y, '─', CellType::LineH);
+            }
+            self.set_char_force(x_target + 1, turn_y, '🭮', CellType::Arrow);
+            self.set_char_force(x_target, turn_y, '├', CellType::LineCorner);
+        } else {
+            self.set_char_force(x_node, turn_y, '└', CellType::LineCorner);
+            for x in x_node + 1..x_target - 1 {
+                self.set_char(x, turn_y, '─', CellType::LineH);
+            }
+            self.set_char_force(x_target - 1, turn_y, '🭬', CellType::Arrow);
+            self.set_char_force(x_target, turn_y, '┤', CellType::LineCorner);
+        }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_loop_back(
         &mut self,
         x_start: usize,
@@ -318,21 +334,34 @@ impl AsciiRenderer {
         y_target: usize,
         margin_x: usize,
         label: Option<&str>,
+        is_bottom_exit: bool,
+        draw_arrow: bool,
+        join_y: usize,
     ) {
-        let join_y = y_target.saturating_sub(3);
+        let turn_y = if is_bottom_exit { y_start + 1 } else { y_start };
 
-        for x in (margin_x..x_start).rev() {
-            self.set_char(x, y_start, '─', CellType::LineH);
+        if is_bottom_exit {
+            self.set_char(x_start, y_start, '│', CellType::LineV);
+            self.set_char_force(x_start, turn_y, '┘', CellType::LineCorner);
+        }
+
+        let h_end_x = if is_bottom_exit {
+            x_start.saturating_sub(1)
+        } else {
+            x_start
+        };
+        for x in (margin_x..=h_end_x).rev() {
+            self.set_char(x, turn_y, '─', CellType::LineH);
         }
         if let Some(lbl) = label {
             let len = lbl.chars().count();
             if x_start > margin_x + len + 2 {
-                self.draw_text(x_start - 2 - len, y_start - 1, lbl);
+                self.draw_text(x_start - 2 - len, turn_y - 1, lbl);
             }
         }
-        self.set_char_force(margin_x, y_start, '└', CellType::LineCorner);
+        self.set_char_force(margin_x, turn_y, '└', CellType::LineCorner);
 
-        for y in (join_y..y_start).rev() {
+        for y in (join_y..turn_y).rev() {
             self.set_char(margin_x, y, '│', CellType::LineV);
         }
         self.set_char_force(margin_x, join_y, '┌', CellType::LineCorner);
@@ -347,7 +376,59 @@ impl AsciiRenderer {
         for y in join_y + 1..y_target {
             self.set_char(x_target, y, '│', CellType::LineV);
         }
-        self.set_char_force(x_target, y_target - 1, '🭭', CellType::Arrow);
+        if draw_arrow {
+            self.set_char_force(x_target, y_target - 1, '🭭', CellType::Arrow);
+        }
+        self.set_char(x_target, join_y - 1, '│', CellType::LineV);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_loop_back_right(
+        &mut self,
+        x_start: usize,
+        y_start: usize,
+        x_target: usize,
+        y_target: usize,
+        margin_x: usize,
+        label: Option<&str>,
+        is_bottom_exit: bool,
+        draw_arrow: bool,
+        join_y: usize,
+    ) {
+        let turn_y = if is_bottom_exit { y_start + 1 } else { y_start };
+
+        if is_bottom_exit {
+            self.set_char(x_start, y_start, '│', CellType::LineV);
+            self.set_char_force(x_start, turn_y, '└', CellType::LineCorner);
+        }
+
+        let h_start_x = if is_bottom_exit { x_start + 1 } else { x_start };
+        for x in h_start_x..=margin_x {
+            self.set_char(x, turn_y, '─', CellType::LineH);
+        }
+        if let Some(lbl) = label {
+            self.draw_text(x_start + 2, turn_y - 1, lbl);
+        }
+        self.set_char_force(margin_x, turn_y, '┘', CellType::LineCorner);
+
+        for y in (join_y..turn_y).rev() {
+            self.set_char(margin_x, y, '│', CellType::LineV);
+        }
+        self.set_char_force(margin_x, join_y, '┐', CellType::LineCorner);
+
+        for x in (x_target + 2..margin_x).rev() {
+            self.set_char(x, join_y, '─', CellType::LineH);
+        }
+
+        self.set_char_force(x_target + 1, join_y, '🭮', CellType::LineCorner);
+        self.set_char_force(x_target, join_y, '│', CellType::LineV);
+
+        for y in join_y + 1..y_target {
+            self.set_char(x_target, y, '│', CellType::LineV);
+        }
+        if draw_arrow {
+            self.set_char_force(x_target, y_target - 1, '🭭', CellType::Arrow);
+        }
         self.set_char(x_target, join_y - 1, '│', CellType::LineV);
     }
 
@@ -371,6 +452,7 @@ impl AsciiRenderer {
                         | '┴'
                         | '┼'
                         | '🭬'
+                        | '🭮'
                 );
                 if !is_line {
                     continue;
@@ -383,28 +465,30 @@ impl AsciiRenderer {
 
                 if y > 0 {
                     let cu = self.canvas[y - 1][x];
-                    if matches!(cu, '│' | '┌' | '┐' | '├' | '┤' | '┬' | '┼' | '🭬')
+                    if matches!(cu, '│' | '┌' | '┐' | '├' | '┤' | '┬' | '┼' | '🭬' | '🭮')
                     {
                         up = true;
                     }
                 }
                 if y < height - 1 {
                     let cd = self.canvas[y + 1][x];
-                    if matches!(cd, '│' | '└' | '┘' | '├' | '┤' | '┴' | '┼' | '🭬' | '🭭')
-                    {
+                    if matches!(
+                        cd,
+                        '│' | '└' | '┘' | '├' | '┤' | '┴' | '┼' | '🭬' | '🭮' | '🭭'
+                    ) {
                         down = true;
                     }
                 }
                 if x > 0 {
                     let cl = self.canvas[y][x - 1];
-                    if matches!(cl, '─' | '┌' | '└' | '├' | '┬' | '┴' | '┼' | '🭬')
+                    if matches!(cl, '─' | '┌' | '└' | '├' | '┬' | '┴' | '┼' | '🭬' | '🭮')
                     {
                         left = true;
                     }
                 }
                 if x < width - 1 {
                     let cr = self.canvas[y][x + 1];
-                    if matches!(cr, '─' | '┐' | '┘' | '┤' | '┬' | '┴' | '┼' | '🭬')
+                    if matches!(cr, '─' | '┐' | '┘' | '┤' | '┬' | '┴' | '┼' | '🭬' | '🭮')
                     {
                         right = true;
                     }
@@ -421,7 +505,13 @@ impl AsciiRenderer {
                     (false, true, false, true) => '┌',
                     (false, true, true, false) => '┐',
                     (true, true, false, false) => '│',
-                    (false, false, true, true) => '─',
+                    (false, false, true, true) => {
+                        if matches!(c, '🭬' | '🭮') {
+                            c
+                        } else {
+                            '─'
+                        }
+                    }
                     _ => c,
                 };
 
@@ -560,12 +650,25 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
             if total_forward_parents > 0 && ready_forward_count == total_forward_parents {
                 let dim = ctx.node_dims.get(id).unwrap();
                 let mut max_y = *lane_y.get(&dim.lane).unwrap_or(&0);
+                let current_node = nodes_map.get(id).unwrap();
 
                 for p in ready_parents {
+                    let parent_node = nodes_map.get(&p.from).unwrap();
+                    let node_is_merge = current_node.text == "Merge";
+                    let parent_is_merge = parent_node.text == "Merge";
+
+                    let gap = if node_is_merge {
+                        2
+                    } else if parent_is_merge {
+                        3
+                    } else {
+                        5
+                    };
+
                     if let Some((_, py)) = processed_nodes.get(&p.from)
-                        && *py + 8 > max_y
+                        && *py + gap > max_y
                     {
-                        max_y = *py + 8;
+                        max_y = *py + gap;
                     }
                 }
 
@@ -605,6 +708,10 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
 
     // 5. Draw Edges
     for edge in &flowchart.edges {
+        if edge.label.as_deref() == Some("Dependency") {
+            continue;
+        }
+
         if !node_pos.contains_key(&edge.from) || !node_pos.contains_key(&edge.to) {
             continue;
         }
@@ -619,32 +726,164 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
 
         let is_decision = n1.node_type == NodeType::Decision;
         let mut label = edge.label.as_deref();
+        let is_target_merge = n2.text == "Merge";
 
         // Loop Back Detection using IDs
         let n1_id_num: usize = edge.from.strip_prefix("node_").unwrap().parse().unwrap();
         let n2_id_num: usize = edge.to.strip_prefix("node_").unwrap().parse().unwrap();
 
+        let is_loop_head = is_decision
+            && flowchart.edges.iter().any(|e| {
+                if e.to == edge.from
+                    && let Some(f_id_part) = e.from.strip_prefix("node_")
+                    && let Ok(f_id_num) = f_id_part.parse::<usize>()
+                {
+                    return f_id_num > n1_id_num;
+                }
+                false
+            });
+
         if n1_id_num > n2_id_num {
             // Loop Back
-            let sx = x1;
-            let sy = y1 + dim1.h / 2;
-            let tx = x2 + dim2.w / 2;
-            let ty = y2;
-            renderer.draw_loop_back(sx, sy, tx, ty, 4, label);
-        } else if is_decision && label == Some("Falso") {
-            let sx = x1 + dim1.w;
+            let is_while_for = n2.node_type == NodeType::Decision
+                || (n2.text == "Merge"
+                    && flowchart.edges.iter().any(|e| {
+                        e.from == edge.to
+                            && nodes_map
+                                .get(&e.to)
+                                .is_some_and(|m| m.node_type == NodeType::Decision)
+                    }));
+            let use_right_side = is_while_for || dim1.lane > 0;
+
+            // Calculate depth_inside to stagger loop lines
+            let mut depth_inside = 0;
+            for other_edge in &flowchart.edges {
+                if let Some(m1_id_part) = other_edge.from.strip_prefix("node_")
+                    && let Some(m2_id_part) = other_edge.to.strip_prefix("node_")
+                    && let Ok(m1_id_num_inner) = m1_id_part.parse::<usize>()
+                    && let Ok(m2_id_num_inner) = m2_id_part.parse::<usize>()
+                    && m1_id_num_inner > m2_id_num_inner
+                {
+                    // If other loop is strictly inside this loop
+                    if (m2_id_num_inner > n2_id_num && m1_id_num_inner < n1_id_num)
+                        || (m2_id_num_inner == n2_id_num
+                            && m1_id_num_inner == n1_id_num
+                            && other_edge.from < edge.from)
+                    {
+                        depth_inside += 1;
+                    }
+                }
+            }
+
+            let is_bottom_exit = n1.node_type != NodeType::Decision;
+
+            let join_y = if is_target_merge {
+                y2
+            } else {
+                y2.saturating_sub(3)
+            };
+
+            if use_right_side {
+                // Calculate max_x in range to avoid crossing nodes
+                let mut max_x = x1 + dim1.w;
+                for (id, (px, _)) in &node_pos {
+                    let id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
+                    if id_num >= n2_id_num && id_num <= n1_id_num {
+                        let dim = ctx.node_dims.get(id).unwrap();
+                        max_x = max_x.max(px + dim.w);
+                    }
+                }
+
+                let sx = if is_bottom_exit {
+                    x1 + dim1.w / 2
+                } else {
+                    x1 + dim1.w - 1
+                };
+                let sy = if is_bottom_exit {
+                    y1 + dim1.h
+                } else {
+                    y1 + dim1.h / 2
+                };
+                let tx = x2 + dim2.w / 2;
+                let ty = y2;
+                let margin_x = max_x + 4 + depth_inside * 4;
+                renderer.draw_loop_back_right(
+                    sx,
+                    sy,
+                    tx,
+                    ty,
+                    margin_x,
+                    label,
+                    is_bottom_exit,
+                    !is_target_merge,
+                    join_y,
+                );
+            } else {
+                let sx = if is_bottom_exit { x1 + dim1.w / 2 } else { x1 };
+                let sy = if is_bottom_exit {
+                    y1 + dim1.h
+                } else {
+                    y1 + dim1.h / 2
+                };
+                let tx = x2 + dim2.w / 2;
+                let ty = y2;
+                let margin_x = 10u64.saturating_sub(depth_inside as u64 * 4) as usize;
+                renderer.draw_loop_back(
+                    sx,
+                    sy,
+                    tx,
+                    ty,
+                    margin_x.max(1),
+                    label,
+                    is_bottom_exit,
+                    !is_target_merge,
+                    join_y,
+                );
+            }
+        } else if is_loop_head {
+            if label == Some("Verdadero") {
+                let sx = x1 + dim1.w - 1;
+                let sy = y1 + dim1.h / 2;
+                let ty = y2;
+                renderer.draw_elbow_right_down(
+                    sx,
+                    sy,
+                    x2 + dim2.w / 2,
+                    ty,
+                    Some("Verdadero"),
+                    !is_target_merge,
+                );
+            } else if label == Some("Falso") {
+                let sx = x1 + dim1.w / 2;
+                let sy = y1 + dim1.h;
+                let ty = y2;
+                renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some("Falso"));
+            } else {
+                let sx = x1 + dim1.w / 2;
+                let sy = y1 + dim1.h;
+                let ty = y2;
+                renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+            }
+        } else if is_decision && label == Some("Verdadero") {
+            let sx = x1 + dim1.w - 1;
             let sy = y1 + dim1.h / 2;
             let _tx = x2 + dim2.w / 2; // Unused but part of logic intent
             let ty = y2;
             // Draw elbow right-down
-            // We need to target x2, but draw_elbow_right_down expects x2.
-            renderer.draw_elbow_right_down(sx, sy, x2 + dim2.w / 2, ty, Some("Falso"));
-        } else if is_decision && label == Some("Verdadero") {
+            renderer.draw_elbow_right_down(
+                sx,
+                sy,
+                x2 + dim2.w / 2,
+                ty,
+                Some("Verdadero"),
+                !is_target_merge,
+            );
+        } else if is_decision && label == Some("Falso") {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let _tx = x2 + dim2.w / 2;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, true, Some("Verdadero"));
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some("Falso"));
         } else if n2.text == "Merge" {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
@@ -660,7 +899,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
             let sy = y1 + dim1.h;
             let _tx = x2 + dim2.w / 2;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, true, label);
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
         }
     }
 
@@ -692,19 +931,41 @@ fn traverse_assign_lanes(id: &str, lane: usize, ctx: &mut TraversalContext) -> u
         .filter(|e| e.from == *id)
         .collect();
 
+    let n_id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
+    let is_loop_head = ctx.flowchart.edges.iter().any(|e| {
+        if e.to == id
+            && let Some(f_id_part) = e.from.strip_prefix("node_")
+            && let Ok(f_id_num) = f_id_part.parse::<usize>()
+        {
+            return f_id_num > n_id_num;
+        }
+        false
+    });
+
     edges.sort_by(|a, b| {
         let la = a.label.as_deref().unwrap_or("");
         let lb = b.label.as_deref().unwrap_or("");
-        if la == "Verdadero" {
+
+        if is_loop_head {
+            if la == "Falso" {
+                return std::cmp::Ordering::Less;
+            }
+            if lb == "Falso" {
+                return std::cmp::Ordering::Greater;
+            }
+        }
+
+        // For all decisions: Falso goes down (stay in lane), Verdadero goes right (new lane)
+        if la == "Falso" {
             std::cmp::Ordering::Less
-        } else if lb == "Verdadero" {
+        } else if lb == "Falso" || la == "Verdadero" {
             std::cmp::Ordering::Greater
+        } else if lb == "Verdadero" {
+            std::cmp::Ordering::Less
         } else {
             std::cmp::Ordering::Equal
         }
     });
-
-    let n_id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
 
     for edge in edges {
         // ID-based back-edge detection for traversal
@@ -713,16 +974,18 @@ fn traverse_assign_lanes(id: &str, lane: usize, ctx: &mut TraversalContext) -> u
             continue;
         }
 
-        let next_lane_start = if edge.label.as_deref() == Some("Falso") {
-            // Heuristic: If False branch goes to End (last node), usually Main Lane.
-            // If False branch goes to side logic, Lane + 1.
-            // We can check if `edge.to` is the Terminator?
-            let target = ctx.nodes_map.get(&edge.to).unwrap();
-            if target.node_type == NodeType::Terminator {
-                0 // End is on Lane 0
+        let next_lane_start = if node.text == "Merge" {
+            lane
+        } else if is_loop_head {
+            if edge.label.as_deref() == Some("Falso") || edge.label.is_none() {
+                lane
             } else {
                 max_lane + 1
             }
+        } else if edge.label.as_deref() == Some("Verdadero") {
+            // For do-while back-edges, we stay in lane 0 if we can?
+            // Actually, if it's a back-edge, traverse_assign_lanes skips it anyway.
+            max_lane + 1
         } else {
             lane
         };

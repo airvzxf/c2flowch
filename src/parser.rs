@@ -245,8 +245,51 @@ impl C2Flowch {
             }
         }
 
+        for &op in &["+=", "-=", "*=", "/=", "%="] {
+            if let Some(pos) = cleaned.find(op) {
+                let var = cleaned[..pos].trim();
+                let expr = cleaned[pos + op.len()..].trim().replace(";", "");
+                let symbol = match op {
+                    "+=" => "+",
+                    "-=" => "-",
+                    "*=" => "*",
+                    "/=" => "/",
+                    "%=" => "%",
+                    _ => unreachable!(),
+                };
+
+                // Only use parentheses if expr contains spaces or operators (excluding simple identifiers or numbers)
+                let is_complex = expr.contains(' ')
+                    || expr.contains('+')
+                    || expr.contains('-')
+                    || expr.contains('*')
+                    || expr.contains('/')
+                    || expr.contains('%');
+
+                if is_complex {
+                    return format!("{} ← {} {} ({})", var, var, symbol, expr);
+                } else {
+                    return format!("{} ← {} {} {}", var, var, symbol, expr);
+                }
+            }
+        }
+
         if cleaned.contains("=") && !cleaned.contains("==") {
             return cleaned.replace(" = ", " ← ").replace("=", " ← ");
+        }
+
+        if (cleaned.contains("++") || cleaned.contains("--")) && !cleaned.contains("(") {
+            let var = cleaned
+                .replace("++", "")
+                .replace("--", "")
+                .replace(";", "")
+                .trim()
+                .to_string();
+            if cleaned.contains("++") {
+                return format!("{} ← {} + 1", var, var);
+            } else {
+                return format!("{} ← {} - 1", var, var);
+            }
         }
 
         cleaned
@@ -419,6 +462,178 @@ impl C2Flowch {
                 }
                 current_last = Some(join_id);
             }
+            "while_statement" => {
+                let condition = node.child_by_field_name("condition").unwrap();
+                let body = node.child_by_field_name("body").unwrap();
+                let cond_text = &code[condition.start_byte()..condition.end_byte()];
+
+                // 1. Pre-condition Merge (Join point for back-edge)
+                let join_cond_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_cond_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "Merge".to_string(),
+                    source_line: None,
+                });
+
+                if let Some(prev) = current_last {
+                    self.flowchart
+                        .add_edge(&prev, &join_cond_id, current_label.take());
+                }
+
+                // 2. Decision (Condition)
+                let dec_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: dec_id.clone(),
+                    node_type: NodeType::Decision,
+                    text: cond_text
+                        .to_string()
+                        .replace("(", "")
+                        .replace(")", "")
+                        .replace("==", "="),
+                    source_line: Some(condition.start_position().row + 1),
+                });
+
+                self.flowchart.add_edge(&join_cond_id, &dec_id, None);
+
+                // 3. Body
+                let body_last = self.traverse(
+                    body,
+                    code,
+                    Some(dec_id.clone()),
+                    Some("Verdadero".to_string()),
+                )?;
+
+                // 4. Exit (Falso)
+                let join_exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "Merge".to_string(),
+                    source_line: None,
+                });
+
+                // Back-edge to Pre-condition Merge
+                if let Some(bl) = body_last {
+                    self.flowchart.add_edge(&bl, &join_cond_id, None);
+                    // Add dependency to ensure exit is below body
+                    self.flowchart
+                        .add_edge(&bl, &join_exit_id, Some("Dependency".to_string()));
+                }
+
+                self.flowchart
+                    .add_edge(&dec_id, &join_exit_id, Some("Falso".to_string()));
+
+                current_last = Some(join_exit_id);
+            }
+            "for_statement" => {
+                let init = node.child_by_field_name("initializer");
+                let cond = node.child_by_field_name("condition");
+                let update = node.child_by_field_name("update");
+                let body = node.child_by_field_name("body").unwrap();
+
+                // 1. Initializer
+                if let Some(i) = init {
+                    let i_text = &code[i.start_byte()..i.end_byte()];
+                    let clean_i = Self::clean_text(i_text);
+                    let init_id = self.next_id();
+                    self.flowchart.add_node(FlowNode {
+                        id: init_id.clone(),
+                        node_type: NodeType::Process,
+                        text: clean_i,
+                        source_line: Some(i.start_position().row + 1),
+                    });
+                    if let Some(prev) = current_last {
+                        self.flowchart
+                            .add_edge(&prev, &init_id, current_label.take());
+                    }
+                    current_last = Some(init_id);
+                }
+
+                // 2. Pre-condition Merge (Join point for back-edge)
+                let join_cond_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_cond_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "Merge".to_string(),
+                    source_line: None,
+                });
+
+                if let Some(prev) = current_last {
+                    self.flowchart
+                        .add_edge(&prev, &join_cond_id, current_label.take());
+                }
+
+                // 3. Decision (Condition)
+                let dec_id = self.next_id();
+                let cond_text = if let Some(c) = cond {
+                    code[c.start_byte()..c.end_byte()]
+                        .to_string()
+                        .replace("(", "")
+                        .replace(")", "")
+                        .replace("==", "=")
+                } else {
+                    "true".to_string()
+                };
+
+                self.flowchart.add_node(FlowNode {
+                    id: dec_id.clone(),
+                    node_type: NodeType::Decision,
+                    text: cond_text,
+                    source_line: cond.map(|c| c.start_position().row + 1),
+                });
+
+                self.flowchart.add_edge(&join_cond_id, &dec_id, None);
+
+                // 4. Body
+                let body_last = self.traverse(
+                    body,
+                    code,
+                    Some(dec_id.clone()),
+                    Some("Verdadero".to_string()),
+                )?;
+
+                // 5. Update
+                let mut last_before_back = body_last.clone();
+                if let Some(u) = update {
+                    // Force update to be its own node if it's an expression
+                    let u_text = &code[u.start_byte()..u.end_byte()];
+                    let clean_u = Self::clean_text(u_text);
+                    let u_id = self.next_id();
+                    self.flowchart.add_node(FlowNode {
+                        id: u_id.clone(),
+                        node_type: NodeType::Process,
+                        text: clean_u,
+                        source_line: Some(u.start_position().row + 1),
+                    });
+                    if let Some(bl) = body_last {
+                        self.flowchart.add_edge(&bl, &u_id, None);
+                    }
+                    last_before_back = Some(u_id);
+                }
+
+                // 6. Exit (Falso)
+                let join_exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "Merge".to_string(),
+                    source_line: None,
+                });
+
+                // Back-edge to Pre-condition Merge
+                if let Some(lbl) = last_before_back {
+                    self.flowchart.add_edge(&lbl, &join_cond_id, None);
+                    // Add dependency to ensure exit is below body
+                    self.flowchart
+                        .add_edge(&lbl, &join_exit_id, Some("Dependency".to_string()));
+                }
+
+                self.flowchart
+                    .add_edge(&dec_id, &join_exit_id, Some("Falso".to_string()));
+
+                current_last = Some(join_exit_id);
+            }
             "do_statement" => {
                 let body = node.child_by_field_name("body").unwrap();
                 let condition = node.child_by_field_name("condition").unwrap();
@@ -526,8 +741,9 @@ impl C2Flowch {
             }
             "declaration" => {
                 let text = &code[node.start_byte()..node.end_byte()];
-                text.contains("=")
+                text.contains("=") || text.contains("++") || text.contains("--")
             }
+            "update_expression" => true,
             _ => false,
         }
     }
