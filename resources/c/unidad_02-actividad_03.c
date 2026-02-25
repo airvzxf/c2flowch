@@ -53,8 +53,8 @@ int main(void) {
             short unsigned monto = 0; // Acumulador del dinero total ingresado
             // Solicitar monedas hasta completar o superar el precio
             do {
-                printf("Ingrese una moneda ($1, $2, $5 o $10): $");
                 short unsigned moneda;
+                printf("Ingrese una moneda ($1, $2, $5 o $10): $");
                 scanf("%hu", &moneda);
                 monto += moneda;
                 printf("Total ingresado: $%hu\n", monto);
