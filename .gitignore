@@ -1,1 +1,5 @@
 target/
+resources/ascii/
+resources/yaml/
+resources/c/*.yml
+resources/c/*.yaml
