@@ -211,6 +211,19 @@ impl AsciiRenderer {
         self.draw_centered_text(x, y, w, h, text);
     }
 
+    pub fn draw_switch_case(&mut self, x: usize, y: usize, w: usize, _h: usize, text: &str) {
+        // En lugar de una caja, dibuja ( texto )
+        // Rellena de espacios el centro para borrar líneas que puedan pasar
+        for i in 0..w {
+            self.set_char_force(x + i, y, ' ', CellType::Node);
+        }
+
+        let text_with_parens = format!("( {} )", text);
+        let len = text_with_parens.chars().count();
+        let start_x = x + (w - len) / 2;
+        self.draw_text(start_x, y, &text_with_parens);
+    }
+
     fn draw_centered_text(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
         let lines: Vec<&str> = text.split('\n').collect();
         let content_h = lines.len();
@@ -622,7 +635,14 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                     // Back-edge check using ID
                     let p_id_num: usize = p.from.strip_prefix("node_").unwrap().parse().unwrap();
                     let c_id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
-                    if p_id_num > c_id_num {
+                    let is_exit = flowchart
+                        .nodes
+                        .iter()
+                        .find(|n| n.id == *id)
+                        .map(|n| n.text.contains("Exit"))
+                        .unwrap_or(false);
+
+                    if p_id_num > c_id_num && !is_exit {
                         return true; // Pretend it's ready (ignore constraint)
                     }
                     false
@@ -634,7 +654,13 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 .filter(|p| {
                     let p_id_num: usize = p.from.strip_prefix("node_").unwrap().parse().unwrap();
                     let c_id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
-                    p_id_num <= c_id_num
+                    let is_exit = flowchart
+                        .nodes
+                        .iter()
+                        .find(|n| n.id == *id)
+                        .map(|n| n.text.contains("Exit"))
+                        .unwrap_or(false);
+                    p_id_num <= c_id_num || is_exit
                 })
                 .count();
 
@@ -643,7 +669,13 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 .filter(|p| {
                     let p_id_num: usize = p.from.strip_prefix("node_").unwrap().parse().unwrap();
                     let c_id_num: usize = id.strip_prefix("node_").unwrap().parse().unwrap();
-                    p_id_num <= c_id_num
+                    let is_exit = flowchart
+                        .nodes
+                        .iter()
+                        .find(|n| n.id == *id)
+                        .map(|n| n.text.contains("Exit"))
+                        .unwrap_or(false);
+                    p_id_num <= c_id_num || is_exit
                 })
                 .count();
 
@@ -694,7 +726,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
         let node = nodes_map.get(id).unwrap();
         let dim = ctx.node_dims.get(id).unwrap();
 
-        if node.text == "Merge" {
+        if node.text.starts_with("Merge") {
             continue;
         }
 
@@ -702,6 +734,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
             NodeType::Terminator => renderer.draw_rounded_box(*x, *y, dim.w, dim.h, &node.text),
             NodeType::Decision => renderer.draw_rhombus(*x, *y, dim.w, dim.h, &node.text),
             NodeType::InputOutput => renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text),
+            NodeType::SwitchCase => renderer.draw_switch_case(*x, *y, dim.w, dim.h, &node.text),
             _ => renderer.draw_box(*x, *y, dim.w, dim.h, &node.text),
         }
     }
@@ -724,9 +757,10 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
         let (x2, y2) = *node_pos.get(&edge.to).unwrap();
         let dim2 = ctx.node_dims.get(&edge.to).unwrap();
 
-        let is_decision = n1.node_type == NodeType::Decision;
+        let is_decision =
+            n1.node_type == NodeType::Decision || n1.node_type == NodeType::SwitchCase;
         let mut label = edge.label.as_deref();
-        let is_target_merge = n2.text == "Merge";
+        let is_target_merge = n2.text.starts_with("Merge");
 
         // Loop Back Detection using IDs
         let n1_id_num: usize = edge.from.strip_prefix("node_").unwrap().parse().unwrap();
@@ -743,7 +777,10 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 false
             });
 
-        if n1_id_num > n2_id_num {
+        // Ignore ID back-edge logic if target is explicitly an Exit
+        let is_back_edge = n1_id_num > n2_id_num && !n2.text.contains("Exit");
+
+        if is_back_edge {
             // Loop Back
             let is_while_for = n2.node_type == NodeType::Decision
                 || (n2.text == "Merge"
@@ -884,7 +921,43 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
             let _tx = x2 + dim2.w / 2;
             let ty = y2;
             renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some("Falso"));
-        } else if n2.text == "Merge" {
+        } else if label == Some("__Break__") {
+            let sx = x1 + dim1.w / 2;
+            let sy = y1 + dim1.h;
+            let tx = x2 + dim2.w / 2;
+            let ty = y2;
+
+            let max_l = *ctx.lanes_width.keys().max().unwrap_or(&0);
+            let collector_x =
+                lane_x.get(&max_l).unwrap() + ctx.lanes_width.get(&max_l).unwrap() + 8;
+
+            // Bajar un poco
+            let y_turn = sy + 2;
+            renderer.draw_vertical_line(sx, sy, y_turn, false, None);
+
+            // Línea a la derecha hacia el colector
+            renderer.set_char_force(sx, y_turn, '└', crate::render::CellType::LineCorner);
+            for x in (sx + 1)..collector_x {
+                renderer.set_char_force(x, y_turn, '─', crate::render::CellType::LineH);
+            }
+
+            // Bajar hasta la coordenada Y del colector final (ty)
+            renderer.set_char_force(
+                collector_x,
+                y_turn,
+                '┐',
+                crate::render::CellType::LineCorner,
+            );
+            renderer.draw_vertical_line(collector_x, y_turn + 1, ty, false, None);
+
+            // Retroceder a la izquierda para unirse a la espina
+            renderer.set_char_force(collector_x, ty, '┘', crate::render::CellType::LineCorner);
+            for x in (tx + 2)..collector_x {
+                renderer.set_char_force(x, ty, '─', crate::render::CellType::LineH);
+            }
+            renderer.set_char_force(tx + 1, ty, '🭮', crate::render::CellType::Arrow);
+            renderer.set_char_force(tx, ty, '├', crate::render::CellType::LineCorner);
+        } else if is_target_merge {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let tx = x2 + dim2.w / 2;
@@ -970,7 +1043,15 @@ fn traverse_assign_lanes(id: &str, lane: usize, ctx: &mut TraversalContext) -> u
     for edge in edges {
         // ID-based back-edge detection for traversal
         let t_id_num: usize = edge.to.strip_prefix("node_").unwrap().parse().unwrap();
-        if t_id_num < n_id_num {
+        let target_node = ctx.nodes_map.get(&edge.to).unwrap();
+        let is_exit = target_node.text.contains("Exit");
+
+        // Prevent breaks or fallthroughs from placing the Exit node in a lateral lane
+        if is_exit && edge.label.as_deref() != Some("Falso") {
+            continue;
+        }
+
+        if t_id_num < n_id_num && !is_exit {
             continue;
         }
 
@@ -1001,7 +1082,7 @@ fn traverse_assign_lanes(id: &str, lane: usize, ctx: &mut TraversalContext) -> u
 
 #[allow(clippy::manual_is_multiple_of)]
 fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) -> (usize, usize) {
-    if node.text == "Merge" {
+    if node.text.starts_with("Merge") {
         return (0, 0);
     }
     let lines: Vec<&str> = node.text.split('\n').collect();
@@ -1026,6 +1107,15 @@ fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) -> (usize, us
             let half_h = h / 2;
             let w = 4 * half_h;
             (w, h)
+        }
+        NodeType::SwitchCase => {
+            let h = 1;
+            let w = content_w + 4; // Extra space for "(  )"
+            let mut final_w = w;
+            if final_w % 2 != 0 {
+                final_w += 1;
+            }
+            (final_w, h)
         }
         NodeType::InputOutput => {
             let h = content_h + 2;

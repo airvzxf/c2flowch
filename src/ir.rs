@@ -8,6 +8,8 @@ pub enum NodeType {
     Process,
     /// Condition (if, switch, while)
     Decision,
+    /// A single case within a switch statement
+    SwitchCase,
     /// Input/Output operation
     InputOutput,
     /// Variable declaration/initialization

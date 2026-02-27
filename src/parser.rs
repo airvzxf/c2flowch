@@ -7,6 +7,7 @@ use tree_sitter::{Node, Parser};
 pub struct C2Flowch {
     flowchart: Flowchart,
     node_count: usize,
+    loop_exits: Vec<String>,
 }
 
 impl C2Flowch {
@@ -18,6 +19,7 @@ impl C2Flowch {
                 edges: Vec::new(),
             },
             node_count: 0,
+            loop_exits: Vec::new(),
         }
     }
 
@@ -306,7 +308,12 @@ impl C2Flowch {
         let mut current_label = label;
 
         match node.kind() {
-            "translation_unit" | "function_definition" | "compound_statement" | "else_clause" => {
+            "translation_unit"
+            | "function_definition"
+            | "compound_statement"
+            | "else_clause"
+            | "case_statement"
+            | "default_statement" => {
                 let mut cursor = node.walk();
                 let children: Vec<Node> = node.children(&mut cursor).collect();
                 let mut i = 0;
@@ -496,7 +503,17 @@ impl C2Flowch {
 
                 self.flowchart.add_edge(&join_cond_id, &dec_id, None);
 
-                // 3. Body
+                // 3. Create Exit early for breaks
+                let join_exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "MergeExit".to_string(),
+                    source_line: None,
+                });
+                self.loop_exits.push(join_exit_id.clone());
+
+                // 4. Body
                 let body_last = self.traverse(
                     body,
                     code,
@@ -504,14 +521,7 @@ impl C2Flowch {
                     Some("Verdadero".to_string()),
                 )?;
 
-                // 4. Exit (Falso)
-                let join_exit_id = self.next_id();
-                self.flowchart.add_node(FlowNode {
-                    id: join_exit_id.clone(),
-                    node_type: NodeType::Process,
-                    text: "Merge".to_string(),
-                    source_line: None,
-                });
+                self.loop_exits.pop();
 
                 // Back-edge to Pre-condition Merge
                 if let Some(bl) = body_last {
@@ -585,6 +595,16 @@ impl C2Flowch {
 
                 self.flowchart.add_edge(&join_cond_id, &dec_id, None);
 
+                // 3.5 Exit (Falso) - Created early for breaks
+                let join_exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: join_exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "MergeExit".to_string(),
+                    source_line: None,
+                });
+                self.loop_exits.push(join_exit_id.clone());
+
                 // 4. Body
                 let body_last = self.traverse(
                     body,
@@ -592,6 +612,8 @@ impl C2Flowch {
                     Some(dec_id.clone()),
                     Some("Verdadero".to_string()),
                 )?;
+
+                self.loop_exits.pop();
 
                 // 5. Update
                 let mut last_before_back = body_last.clone();
@@ -612,15 +634,6 @@ impl C2Flowch {
                     last_before_back = Some(u_id);
                 }
 
-                // 6. Exit (Falso)
-                let join_exit_id = self.next_id();
-                self.flowchart.add_node(FlowNode {
-                    id: join_exit_id.clone(),
-                    node_type: NodeType::Process,
-                    text: "Merge".to_string(),
-                    source_line: None,
-                });
-
                 // Back-edge to Pre-condition Merge
                 if let Some(lbl) = last_before_back {
                     self.flowchart.add_edge(&lbl, &join_cond_id, None);
@@ -639,11 +652,33 @@ impl C2Flowch {
                 let condition = node.child_by_field_name("condition").unwrap();
                 let cond_text = &code[condition.start_byte()..condition.end_byte()];
 
-                // Capture index of next node to be added
-                let pre_body_node_idx = self.flowchart.nodes.len();
-                let loop_predecessor = current_last.clone();
+                // Create exit node for breaks
+                let exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "MergeExit".to_string(),
+                    source_line: None,
+                });
+                self.loop_exits.push(exit_id.clone());
 
-                let body_last = self.traverse(body, code, current_last, current_label.take())?;
+                // Create an explicit entry Merge node for the loop back edge
+                let entry_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: entry_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "Merge".to_string(),
+                    source_line: None,
+                });
+
+                if let Some(prev) = current_last {
+                    self.flowchart
+                        .add_edge(&prev, &entry_id, current_label.take());
+                }
+
+                let body_last = self.traverse(body, code, Some(entry_id.clone()), None)?;
+
+                self.loop_exits.pop();
 
                 let dec_id = self.next_id();
                 self.flowchart.add_node(FlowNode {
@@ -659,25 +694,142 @@ impl C2Flowch {
 
                 if let Some(bl) = body_last {
                     self.flowchart.add_edge(&bl, &dec_id, None);
+                } else {
+                    self.flowchart.add_edge(&entry_id, &dec_id, None);
                 }
 
-                // Link loop back to body start
-                if self.flowchart.nodes.len() > pre_body_node_idx {
-                    let body_start_id = self.flowchart.nodes[pre_body_node_idx].id.clone();
+                // Link loop back to entry
+                self.flowchart
+                    .add_edge(&dec_id, &entry_id, Some("Verdadero".to_string()));
+                self.flowchart
+                    .add_edge(&dec_id, &exit_id, Some("Falso".to_string()));
+
+                current_last = Some(exit_id);
+            }
+            "break_statement" => {
+                if let Some(prev) = current_last
+                    && let Some(exit_id) = self.loop_exits.last()
+                {
                     self.flowchart
-                        .add_edge(&dec_id, &body_start_id, Some("Verdadero".to_string()));
-                } else {
-                    // Fallback if body was empty
-                    if let Some(sl) = loop_predecessor {
-                        self.flowchart
-                            .add_edge(&dec_id, &sl, Some("Verdadero".to_string()));
-                    } else {
-                        // Fallback self-loop
-                        self.flowchart
-                            .add_edge(&dec_id, &dec_id, Some("Verdadero".to_string()));
+                        .add_edge(&prev, exit_id, Some("__Break__".to_string()));
+                }
+                current_last = None;
+            }
+            "switch_statement" => {
+                let condition = node.child_by_field_name("condition").unwrap();
+                let cond_text = &code[condition.start_byte()..condition.end_byte()];
+                let cond_clean = cond_text.to_string().replace("(", "").replace(")", "");
+
+                let switch_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: switch_id.clone(),
+                    node_type: NodeType::Decision, // Esto dibujará el Rombo/Diamante
+                    text: cond_clean,
+                    source_line: Some(node.start_position().row + 1),
+                });
+
+                if let Some(prev) = current_last {
+                    self.flowchart
+                        .add_edge(&prev, &switch_id, current_label.take());
+                }
+
+                let exit_id = self.next_id();
+                self.flowchart.add_node(FlowNode {
+                    id: exit_id.clone(),
+                    node_type: NodeType::Process,
+                    text: "MergeExit".to_string(),
+                    source_line: None,
+                });
+
+                self.loop_exits.push(exit_id.clone());
+
+                let body = node.child_by_field_name("body").unwrap();
+                let mut spine_last = switch_id.clone();
+                let mut fallthrough_id: Option<String> = None;
+                let mut prev_case_nodes: Vec<String> = Vec::new();
+
+                let mut cursor = body.walk();
+                for child in body.children(&mut cursor) {
+                    if child.kind() == "case_statement" || child.kind() == "default_statement" {
+                        let is_default = child.kind() == "default_statement"
+                            || child.child_by_field_name("value").is_none();
+
+                        let case_text = if is_default {
+                            "default".to_string()
+                        } else {
+                            let val_node = child.child_by_field_name("value").unwrap();
+                            code[val_node.start_byte()..val_node.end_byte()].to_string()
+                        };
+
+                        let case_id = self.next_id();
+                        self.flowchart.add_node(FlowNode {
+                            id: case_id.clone(),
+                            node_type: NodeType::SwitchCase,
+                            text: case_text,
+                            source_line: Some(child.start_position().row + 1),
+                        });
+
+                        // Make this spine node wait for all nodes of the previous case
+                        for prev_node in &prev_case_nodes {
+                            self.flowchart.add_edge(
+                                prev_node,
+                                &case_id,
+                                Some("Dependency".to_string()),
+                            );
+                        }
+
+                        let spine_label = if spine_last == switch_id {
+                            None
+                        } else {
+                            Some("Falso".to_string())
+                        };
+                        self.flowchart.add_edge(&spine_last, &case_id, spine_label);
+                        spine_last = case_id.clone();
+
+                        let case_entry_id = self.next_id();
+                        self.flowchart.add_node(FlowNode {
+                            id: case_entry_id.clone(),
+                            node_type: NodeType::Process,
+                            text: "MergeEntry".to_string(),
+                            source_line: None,
+                        });
+
+                        self.flowchart.add_edge(
+                            &case_id,
+                            &case_entry_id,
+                            Some("Verdadero".to_string()),
+                        );
+                        if let Some(ft) = fallthrough_id {
+                            self.flowchart.add_edge(&ft, &case_entry_id, None);
+                        }
+
+                        let start_idx = self.flowchart.nodes.len();
+                        let case_last = self.traverse(child, code, Some(case_entry_id), None)?;
+                        fallthrough_id = case_last;
+                        let end_idx = self.flowchart.nodes.len();
+
+                        prev_case_nodes = self.flowchart.nodes[start_idx..end_idx]
+                            .iter()
+                            .map(|n| n.id.clone())
+                            .collect();
                     }
                 }
-                current_last = Some(dec_id);
+
+                if let Some(ft) = fallthrough_id {
+                    self.flowchart.add_edge(&ft, &exit_id, None);
+                }
+
+                // Exit node waits for the last case's nodes too
+                for prev_node in &prev_case_nodes {
+                    self.flowchart
+                        .add_edge(prev_node, &exit_id, Some("Dependency".to_string()));
+                }
+
+                self.flowchart
+                    .add_edge(&spine_last, &exit_id, Some("Falso".to_string()));
+
+                self.loop_exits.pop();
+                current_last = Some(exit_id);
             }
             "return_statement" => {
                 let node_id = self.next_id();
