@@ -55,36 +55,6 @@ impl AsciiRenderer {
         }
     }
 
-    pub fn draw_rounded_box(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        if w < 2 || h < 2 {
-            return;
-        }
-        // Draw corners
-        self.set_char_force(x, y, '╭', CellType::Node);
-        self.set_char_force(x + w - 1, y, '╮', CellType::Node);
-        self.set_char_force(x, y + h - 1, '╰', CellType::Node);
-        self.set_char_force(x + w - 1, y + h - 1, '╯', CellType::Node);
-
-        // Draw edges
-        for i in 1..w - 1 {
-            self.set_char_force(x + i, y, '─', CellType::Node);
-            self.set_char_force(x + i, y + h - 1, '─', CellType::Node);
-        }
-        for j in 1..h - 1 {
-            self.set_char_force(x, y + j, '│', CellType::Node);
-            self.set_char_force(x + w - 1, y + j, '│', CellType::Node);
-        }
-
-        // Fill center
-        for j in 1..h - 1 {
-            for i in 1..w - 1 {
-                self.set_char_force(x + i, y + j, ' ', CellType::Node);
-            }
-        }
-
-        self.draw_centered_text(x, y, w, h, text);
-    }
-
     pub fn draw_box(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
         if w < 2 || h < 2 {
             return;
@@ -206,6 +176,22 @@ impl AsciiRenderer {
             for k in (left_x + 1)..right_x {
                 self.set_char_force(k, draw_y, ' ', CellType::Node);
             }
+        }
+
+        self.draw_centered_text(x, y, w, h, text);
+    }
+
+    pub fn draw_terminator(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
+        // En lugar de una caja, dibuja (  texto  )
+        // Rellena de espacios el centro
+        for j in 0..h {
+            for i in 0..w {
+                self.set_char_force(x + i, y + j, ' ', CellType::Node);
+            }
+            // Los paréntesis solo en los extremos de cada línea si es multilínea,
+            // pero normalmente es solo una.
+            self.set_char_force(x, y + j, '(', CellType::Node);
+            self.set_char_force(x + w - 1, y + j, ')', CellType::Node);
         }
 
         self.draw_centered_text(x, y, w, h, text);
@@ -737,7 +723,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
         }
 
         match node.node_type {
-            NodeType::Terminator => renderer.draw_rounded_box(*x, *y, dim.w, dim.h, &node.text),
+            NodeType::Terminator => renderer.draw_terminator(*x, *y, dim.w, dim.h, &node.text),
             NodeType::Decision => renderer.draw_rhombus(*x, *y, dim.w, dim.h, &node.text),
             NodeType::InputOutput => renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text),
             NodeType::SwitchCase => renderer.draw_switch_case(*x, *y, dim.w, dim.h, &node.text),
@@ -1113,6 +1099,15 @@ fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) -> (usize, us
             let half_h = h / 2;
             let w = 4 * half_h;
             (w, h)
+        }
+        NodeType::Terminator => {
+            let h = content_h;
+            let w = content_w + 6; // Space for "(  ...  )"
+            let mut final_w = w;
+            if final_w % 2 != 0 {
+                final_w += 1;
+            }
+            (final_w, h)
         }
         NodeType::SwitchCase => {
             let h = 1;
