@@ -6,7 +6,6 @@ use tree_sitter::Node;
 pub(crate) fn parse_translation_unit(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -24,7 +23,7 @@ pub(crate) fn parse_translation_unit(
             continue;
         }
 
-        if crate::parser::utils::is_io(child, code) {
+        if crate::parser::utils::is_io(child, &parser.code) {
             let mut group_text = Vec::new();
             let mut j = i;
             while j < children.len() {
@@ -32,9 +31,9 @@ pub(crate) fn parse_translation_unit(
                     j += 1;
                     continue;
                 }
-                if crate::parser::utils::is_io(children[j], code) {
+                if crate::parser::utils::is_io(children[j], &parser.code) {
                     let text = crate::parser::utils::clean_text(
-                        &code[children[j].start_byte()..children[j].end_byte()],
+                        &parser.code[children[j].start_byte()..children[j].end_byte()],
                     );
                     if !text.is_empty() {
                         group_text.push(text);
@@ -62,7 +61,7 @@ pub(crate) fn parse_translation_unit(
             }
             i = j;
             continue;
-        } else if crate::parser::utils::is_process(child, code) {
+        } else if crate::parser::utils::is_process(child, &parser.code) {
             let mut group_text = Vec::new();
             let mut j = i;
             while j < children.len() {
@@ -70,9 +69,9 @@ pub(crate) fn parse_translation_unit(
                     j += 1;
                     continue;
                 }
-                if crate::parser::utils::is_process(children[j], code) {
+                if crate::parser::utils::is_process(children[j], &parser.code) {
                     let text = crate::parser::utils::clean_text(
-                        &code[children[j].start_byte()..children[j].end_byte()],
+                        &parser.code[children[j].start_byte()..children[j].end_byte()],
                     );
                     if !text.is_empty() {
                         group_text.push(text);
@@ -105,7 +104,7 @@ pub(crate) fn parse_translation_unit(
         // For non-leaf nodes, they might or might not generate a node.
         // If traverse returns a node, we should consume the label.
         let prev_last = current_last.clone();
-        current_last = parser.traverse(child, code, current_last, current_label.clone())?;
+        current_last = parser.traverse(child, current_last, current_label.clone())?;
         if current_last != prev_last {
             current_label = None; // A node was added, consume label
         }
@@ -118,7 +117,6 @@ pub(crate) fn parse_translation_unit(
 pub(crate) fn parse_if_statement(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -126,7 +124,7 @@ pub(crate) fn parse_if_statement(
     let mut current_label = label;
 
     let condition = node.child_by_field_name("condition").unwrap();
-    let cond_text = &code[condition.start_byte()..condition.end_byte()];
+    let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
     let if_id = parser.next_id();
 
     parser.flowchart.add_node(FlowNode {
@@ -149,19 +147,14 @@ pub(crate) fn parse_if_statement(
     let consequence = node.child_by_field_name("consequence").unwrap();
     let true_last = parser.traverse(
         consequence,
-        code,
         Some(if_id.clone()),
         Some("Verdadero".to_string()),
     )?;
 
     let mut false_last = None;
     if let Some(alternative) = node.child_by_field_name("alternative") {
-        false_last = parser.traverse(
-            alternative,
-            code,
-            Some(if_id.clone()),
-            Some("Falso".to_string()),
-        )?;
+        false_last =
+            parser.traverse(alternative, Some(if_id.clone()), Some("Falso".to_string()))?;
     }
 
     let join_id = parser.next_id();
@@ -190,7 +183,6 @@ pub(crate) fn parse_if_statement(
 pub(crate) fn parse_while_statement(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -199,7 +191,7 @@ pub(crate) fn parse_while_statement(
 
     let condition = node.child_by_field_name("condition").unwrap();
     let body = node.child_by_field_name("body").unwrap();
-    let cond_text = &code[condition.start_byte()..condition.end_byte()];
+    let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
     // 1. Pre-condition Merge (Join point for back-edge)
     let join_cond_id = parser.next_id();
@@ -242,12 +234,7 @@ pub(crate) fn parse_while_statement(
     parser.loop_exits.push(join_exit_id.clone());
 
     // 4. Body
-    let body_last = parser.traverse(
-        body,
-        code,
-        Some(dec_id.clone()),
-        Some("Verdadero".to_string()),
-    )?;
+    let body_last = parser.traverse(body, Some(dec_id.clone()), Some("Verdadero".to_string()))?;
 
     parser.loop_exits.pop();
 
@@ -272,7 +259,6 @@ pub(crate) fn parse_while_statement(
 pub(crate) fn parse_do_statement(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -281,7 +267,7 @@ pub(crate) fn parse_do_statement(
 
     let body = node.child_by_field_name("body").unwrap();
     let condition = node.child_by_field_name("condition").unwrap();
-    let cond_text = &code[condition.start_byte()..condition.end_byte()];
+    let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
     // Create exit node for breaks
     let exit_id = parser.next_id();
@@ -308,7 +294,7 @@ pub(crate) fn parse_do_statement(
             .add_edge(&prev, &entry_id, current_label.take());
     }
 
-    let body_last = parser.traverse(body, code, Some(entry_id.clone()), None)?;
+    let body_last = parser.traverse(body, Some(entry_id.clone()), None)?;
 
     parser.loop_exits.pop();
 
@@ -346,7 +332,6 @@ pub(crate) fn parse_do_statement(
 pub(crate) fn parse_for_statement(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -360,8 +345,8 @@ pub(crate) fn parse_for_statement(
 
     // 1. Initializer
     if let Some(i) = init {
-        let i_text = &code[i.start_byte()..i.end_byte()];
-        let clean_i = crate::parser::utils::clean_text(i_text);
+        let i_text = parser.code[i.start_byte()..i.end_byte()].to_string();
+        let clean_i = crate::parser::utils::clean_text(&i_text);
         let init_id = parser.next_id();
         parser.flowchart.add_node(FlowNode {
             id: init_id.clone(),
@@ -395,7 +380,7 @@ pub(crate) fn parse_for_statement(
     // 3. Decision (Condition)
     let dec_id = parser.next_id();
     let cond_text = if let Some(c) = cond {
-        code[c.start_byte()..c.end_byte()]
+        parser.code[c.start_byte()..c.end_byte()]
             .to_string()
             .replace("(", "")
             .replace(")", "")
@@ -424,12 +409,7 @@ pub(crate) fn parse_for_statement(
     parser.loop_exits.push(join_exit_id.clone());
 
     // 4. Body
-    let body_last = parser.traverse(
-        body,
-        code,
-        Some(dec_id.clone()),
-        Some("Verdadero".to_string()),
-    )?;
+    let body_last = parser.traverse(body, Some(dec_id.clone()), Some("Verdadero".to_string()))?;
 
     parser.loop_exits.pop();
 
@@ -437,8 +417,8 @@ pub(crate) fn parse_for_statement(
     let mut last_before_back = body_last.clone();
     if let Some(u) = update {
         // Force update to be its own node if it's an expression
-        let u_text = &code[u.start_byte()..u.end_byte()];
-        let clean_u = crate::parser::utils::clean_text(u_text);
+        let u_text = parser.code[u.start_byte()..u.end_byte()].to_string();
+        let clean_u = crate::parser::utils::clean_text(&u_text);
         let u_id = parser.next_id();
         parser.flowchart.add_node(FlowNode {
             id: u_id.clone(),
@@ -473,7 +453,6 @@ pub(crate) fn parse_for_statement(
 pub(crate) fn parse_switch_statement(
     parser: &mut C2Flowch,
     node: Node,
-    code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -481,7 +460,7 @@ pub(crate) fn parse_switch_statement(
     let mut current_label = label;
 
     let condition = node.child_by_field_name("condition").unwrap();
-    let cond_text = &code[condition.start_byte()..condition.end_byte()];
+    let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
     let cond_clean = cond_text.to_string().replace("(", "").replace(")", "");
 
     let switch_id = parser.next_id();
@@ -523,7 +502,7 @@ pub(crate) fn parse_switch_statement(
                 "default".to_string()
             } else {
                 let val_node = child.child_by_field_name("value").unwrap();
-                code[val_node.start_byte()..val_node.end_byte()].to_string()
+                parser.code[val_node.start_byte()..val_node.end_byte()].to_string()
             };
 
             let case_id = parser.next_id();
@@ -567,7 +546,7 @@ pub(crate) fn parse_switch_statement(
             }
 
             let start_idx = parser.flowchart.nodes.len();
-            let case_last = parser.traverse(child, code, Some(case_entry_id), None)?;
+            let case_last = parser.traverse(child, Some(case_entry_id), None)?;
             fallthrough_id = case_last;
             let end_idx = parser.flowchart.nodes.len();
 
@@ -602,7 +581,6 @@ pub(crate) fn parse_switch_statement(
 pub(crate) fn parse_break_statement(
     parser: &mut C2Flowch,
     _node: Node,
-    _code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {
@@ -624,7 +602,6 @@ pub(crate) fn parse_break_statement(
 pub(crate) fn parse_return_statement(
     parser: &mut C2Flowch,
     node: Node,
-    _code: &str,
     last_node_id: Option<String>,
     label: Option<String>,
 ) -> Result<Option<String>> {

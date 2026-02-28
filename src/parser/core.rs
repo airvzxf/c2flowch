@@ -8,10 +8,11 @@ pub struct C2Flowch {
     pub(crate) flowchart: Flowchart,
     pub(crate) node_count: usize,
     pub(crate) loop_exits: Vec<String>,
+    pub(crate) code: String,
 }
 
 impl C2Flowch {
-    pub fn new(title: String, _level: u8) -> Self {
+    pub fn new(title: String, _level: u8, code: String) -> Self {
         Self {
             flowchart: Flowchart {
                 title,
@@ -20,6 +21,7 @@ impl C2Flowch {
             },
             node_count: 0,
             loop_exits: Vec::new(),
+            code,
         }
     }
 
@@ -40,6 +42,7 @@ impl C2Flowch {
         let mut converter = Self::new(
             path.file_name().unwrap().to_string_lossy().into_owned(),
             level,
+            code.clone(),
         );
 
         let start_id = converter.next_id();
@@ -50,7 +53,7 @@ impl C2Flowch {
             source_line: None,
         });
 
-        converter.traverse(tree.root_node(), &code, Some(start_id), None)?;
+        converter.traverse(tree.root_node(), Some(start_id), None)?;
 
         Ok(converter.flowchart)
     }
@@ -58,7 +61,6 @@ impl C2Flowch {
     pub(crate) fn traverse(
         &mut self,
         node: Node,
-        code: &str,
         last_node_id: Option<String>,
         label: Option<String>,
     ) -> Result<Option<String>> {
@@ -75,7 +77,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_translation_unit(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -84,7 +85,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_if_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -93,7 +93,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_while_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -102,7 +101,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_for_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -111,7 +109,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_do_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -120,7 +117,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_break_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -129,7 +125,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_switch_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -138,7 +133,6 @@ impl C2Flowch {
                 return crate::parser::statements::parse_return_statement(
                     self,
                     node,
-                    code,
                     current_last,
                     current_label,
                 );
@@ -148,8 +142,7 @@ impl C2Flowch {
                     let mut cursor = node.walk();
                     for child in node.children(&mut cursor) {
                         let prev_last = current_last.clone();
-                        current_last =
-                            self.traverse(child, code, current_last, current_label.clone())?;
+                        current_last = self.traverse(child, current_last, current_label.clone())?;
                         if current_last != prev_last {
                             current_label = None;
                         }
