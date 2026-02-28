@@ -104,7 +104,7 @@ fn main() -> Result<()> {
                     }
                 }
                 RenderFormat::Svg => {
-                    return Err(anyhow::anyhow!("Format svg not supported yet"));
+                    anyhow::bail!("Format svg not supported yet");
                 }
             }
         }

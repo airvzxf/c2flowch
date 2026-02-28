@@ -47,7 +47,7 @@ impl C2Flowch {
             .to_string_lossy()
             .into_owned();
 
-        let mut converter = Self::new(file_name, level, code.clone());
+        let mut converter = Self::new(file_name, level, code);
 
         let start_id = converter.next_id();
         converter.flowchart.add_node(FlowNode {

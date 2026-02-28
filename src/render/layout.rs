@@ -127,6 +127,15 @@ impl<'a> LayoutEngine<'a> {
                     .filter(|e| e.to == *id)
                     .collect();
 
+                let c_id_num: usize = parse_id(id);
+                let is_exit = self
+                    .flowchart
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == *id)
+                    .map(|n| n.text.contains("Exit"))
+                    .unwrap_or(false);
+
                 let ready_parents: Vec<_> = parents
                     .iter()
                     .filter(|p| {
@@ -135,15 +144,6 @@ impl<'a> LayoutEngine<'a> {
                         }
                         // Back-edge check using ID
                         let p_id_num: usize = parse_id(&p.from);
-                        let c_id_num: usize = parse_id(id);
-                        let is_exit = self
-                            .flowchart
-                            .nodes
-                            .iter()
-                            .find(|n| n.id == *id)
-                            .map(|n| n.text.contains("Exit"))
-                            .unwrap_or(false);
-
                         if p_id_num > c_id_num && !is_exit {
                             return true; // Pretend it's ready (ignore constraint)
                         }
@@ -155,14 +155,6 @@ impl<'a> LayoutEngine<'a> {
                     .iter()
                     .filter(|p| {
                         let p_id_num: usize = parse_id(&p.from);
-                        let c_id_num: usize = parse_id(id);
-                        let is_exit = self
-                            .flowchart
-                            .nodes
-                            .iter()
-                            .find(|n| n.id == *id)
-                            .map(|n| n.text.contains("Exit"))
-                            .unwrap_or(false);
                         p_id_num <= c_id_num || is_exit
                     })
                     .count();
@@ -171,14 +163,6 @@ impl<'a> LayoutEngine<'a> {
                     .iter()
                     .filter(|p| {
                         let p_id_num: usize = parse_id(&p.from);
-                        let c_id_num: usize = parse_id(id);
-                        let is_exit = self
-                            .flowchart
-                            .nodes
-                            .iter()
-                            .find(|n| n.id == *id)
-                            .map(|n| n.text.contains("Exit"))
-                            .unwrap_or(false);
                         p_id_num <= c_id_num || is_exit
                     })
                     .count();
