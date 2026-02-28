@@ -335,17 +335,29 @@ pub(crate) fn clean_text(text: &str) -> String {
         return cleaned.replace(" = ", " ← ").replace("=", " ← ");
     }
 
-    if (cleaned.contains("++") || cleaned.contains("--")) && !cleaned.contains("(") {
-        let var = cleaned
-            .replace("++", "")
-            .replace("--", "")
-            .replace(";", "")
-            .trim()
-            .to_string();
-        if cleaned.contains("++") {
-            return format!("{} ← {} + 1", var, var);
-        } else {
-            return format!("{} ← {} - 1", var, var);
+    if (cleaned.starts_with("strcpy(") || cleaned.starts_with("strncpy("))
+        && let Some(inner_end) = cleaned.rfind(')')
+    {
+        let func_len = if cleaned.starts_with("strcpy(") { 7 } else { 8 };
+        let inner = &cleaned[func_len..inner_end];
+        let args = split_args(inner);
+        if args.len() >= 2 {
+            return format!("{} ← {}", args[0], args[1]);
+        }
+    }
+
+    if cleaned.contains("++") || cleaned.contains("--") {
+        let is_inc = cleaned.contains("++");
+        let op = if is_inc { "++" } else { "--" };
+        let mut var = cleaned.replace(op, "").replace(";", "").trim().to_string();
+
+        if var.starts_with('(') && var.ends_with(')') {
+            var = var[1..var.len() - 1].trim().to_string();
+        }
+
+        if !var.contains('(') {
+            let symbol = if is_inc { "+" } else { "-" };
+            return format!("{} ← {} {} 1", var, var, symbol);
         }
     }
 
@@ -385,11 +397,79 @@ pub(crate) fn is_process(node: Node, code: &str) -> bool {
     }
 }
 
+pub(crate) fn simplify_strcmp(mut text: String) -> String {
+    while let Some(start) = text.find("strcmp(") {
+        let mut paren_count = 0;
+        let mut end_idx = start + 7;
+        let chars = text.as_bytes();
+        let mut found_end = false;
+        while end_idx < chars.len() {
+            if chars[end_idx] == b'(' {
+                paren_count += 1;
+            } else if chars[end_idx] == b')' {
+                if paren_count == 0 {
+                    found_end = true;
+                    break;
+                }
+                paren_count -= 1;
+            }
+            end_idx += 1;
+        }
+
+        if found_end {
+            let inner = &text[start + 7..end_idx];
+            let args = split_args(inner);
+            if args.len() == 2 {
+                let call_str = text[start..=end_idx].to_string();
+
+                let mut replaced = false;
+                let patterns = [
+                    (" == 0", " = "),
+                    (" ==0", " = "),
+                    ("= 0", " = "),
+                    ("=0", " = "),
+                    (" != 0", " != "),
+                    (" !=0", " != "),
+                    (" > 0", " > "),
+                    (" >0", " > "),
+                    (" < 0", " < "),
+                    (" <0", " < "),
+                    (" >= 0", " >= "),
+                    (" >=0", " >= "),
+                    (" <= 0", " <= "),
+                    (" <=0", " <= "),
+                ];
+
+                for (suffix, new_op) in patterns {
+                    let full_pattern = format!("{}{}", call_str, suffix);
+                    if text.contains(&full_pattern) {
+                        text = text
+                            .replace(&full_pattern, &format!("{}{}{}", args[0], new_op, args[1]));
+                        replaced = true;
+                        break;
+                    }
+                }
+
+                if replaced {
+                    continue;
+                }
+
+                // fallback if no pattern matched
+                text = text.replace(&call_str, &format!("{} = {}", args[0], args[1]));
+                continue;
+            }
+        }
+        break; // Stop if we can't parse it
+    }
+    text
+}
+
 pub(crate) fn clean_condition(text: &str) -> String {
     let mut cleaned = remove_pointer_syntax(text.trim());
     if cleaned.starts_with('(') && cleaned.ends_with(')') {
         cleaned = cleaned[1..cleaned.len() - 1].to_string();
     }
+    cleaned = simplify_strcmp(cleaned);
     cleaned.replace("==", "=").to_string()
 }
 
