@@ -9,8 +9,8 @@ int main() {
         printf("Caso 1\n");
     case 2:
         printf("Caso 2\n");
-    case 3:
-        printf("Caso 3\n");
+    case 35:
+        printf("Caso 35\n");
     default:
         printf("Caso default\n");
   }
