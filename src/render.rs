@@ -181,7 +181,17 @@ impl AsciiRenderer {
         self.draw_centered_text(x, y, w, h, text);
     }
 
-    pub fn draw_terminator(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
+    pub fn draw_terminator(&mut self, mut x: usize, y: usize, w: usize, h: usize, text: &str) {
+        // Shift 1 space right if text length is even to improve alignment with the center arrow
+        let content_w = text
+            .split('\n')
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0);
+        if content_w.is_multiple_of(2) {
+            x += 1;
+        }
+
         // En lugar de una caja, dibuja (  texto  )
         // Rellena de espacios el centro
         for j in 0..h {
@@ -197,7 +207,13 @@ impl AsciiRenderer {
         self.draw_centered_text(x, y, w, h, text);
     }
 
-    pub fn draw_switch_case(&mut self, x: usize, y: usize, w: usize, _h: usize, text: &str) {
+    pub fn draw_switch_case(&mut self, mut x: usize, y: usize, w: usize, _h: usize, text: &str) {
+        // Shift 1 space right if text length is even to improve alignment with the center arrow
+        let content_w = text.chars().count();
+        if content_w.is_multiple_of(2) {
+            x += 1;
+        }
+
         // En lugar de una caja, dibuja ( texto )
         // Rellena de espacios el centro para borrar líneas que puedan pasar
         for i in 0..w {
@@ -581,6 +597,13 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
 
     traverse_assign_lanes(&start_node.id, 0, &mut ctx);
 
+    // Ensure all lane widths are even to guarantee perfect center alignment for any node width
+    for lw in ctx.lanes_width.values_mut() {
+        if *lw % 2 != 0 {
+            *lw += 1;
+        }
+    }
+
     // 2. Calculate Lane X Offsets
     let mut lane_x: HashMap<usize, usize> = HashMap::new();
     let mut current_x = 20;
@@ -602,7 +625,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
     if let Some(dim) = ctx.node_dims.get(&start_node.id) {
         let lx = *lane_x.get(&dim.lane).unwrap();
         let lw = *ctx.lanes_width.get(&dim.lane).unwrap();
-        let actual_x = lx + (lw - dim.w) / 2;
+        let actual_x = lx + (lw - dim.w).div_ceil(2);
         node_pos.insert(start_node.id.clone(), (actual_x, 2));
         processed_nodes.insert(start_node.id.clone(), (actual_x, 2 + dim.h));
         *lane_y.entry(dim.lane).or_insert(0) = 2 + dim.h;
@@ -700,7 +723,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
 
                 let lx = *lane_x.get(&dim.lane).unwrap();
                 let lw = *ctx.lanes_width.get(&dim.lane).unwrap();
-                let actual_x = lx + (lw - dim.w) / 2;
+                let actual_x = lx + (lw - dim.w).div_ceil(2);
 
                 node_pos.insert(id.clone(), (actual_x, max_y));
                 processed_nodes.insert(id.clone(), (actual_x, max_y + dim.h));
@@ -894,7 +917,14 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
             }
         } else if is_decision && label == Some("Verdadero") {
-            let sx = x1 + dim1.w - 1;
+            let mut sx = x1 + dim1.w - 1;
+            let mut display_label = "Verdadero";
+
+            if n1.node_type == NodeType::SwitchCase {
+                sx += 2; // Leave one space after the ')'
+                display_label = "Verdadero"; // The shift in sx already provides appropriate padding
+            }
+
             let sy = y1 + dim1.h / 2;
             let _tx = x2 + dim2.w / 2; // Unused but part of logic intent
             let ty = y2;
@@ -904,7 +934,7 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
                 sy,
                 x2 + dim2.w / 2,
                 ty,
-                Some("Verdadero"),
+                Some(display_label),
                 !is_target_merge,
             );
         } else if is_decision && label == Some("Falso") {
@@ -1103,20 +1133,12 @@ fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) -> (usize, us
         NodeType::Terminator => {
             let h = content_h;
             let w = content_w + 6; // Space for "(  ...  )"
-            let mut final_w = w;
-            if final_w % 2 != 0 {
-                final_w += 1;
-            }
-            (final_w, h)
+            (w, h)
         }
         NodeType::SwitchCase => {
             let h = 1;
             let w = content_w + 4; // Extra space for "(  )"
-            let mut final_w = w;
-            if final_w % 2 != 0 {
-                final_w += 1;
-            }
-            (final_w, h)
+            (w, h)
         }
         NodeType::InputOutput => {
             let h = content_h + 2;
