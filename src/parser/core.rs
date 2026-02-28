@@ -39,11 +39,13 @@ impl C2Flowch {
             .context("Error setting language")?;
 
         let tree = parser.parse(&code, None).context("Error parsing C code")?;
-        let mut converter = Self::new(
-            path.file_name().unwrap().to_string_lossy().into_owned(),
-            level,
-            code.clone(),
-        );
+        let file_name = path
+            .file_name()
+            .context("Could not get file name")?
+            .to_string_lossy()
+            .into_owned();
+
+        let mut converter = Self::new(file_name, level, code.clone());
 
         let start_id = converter.next_id();
         converter.flowchart.add_node(FlowNode {

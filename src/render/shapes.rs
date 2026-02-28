@@ -1,4 +1,5 @@
 use crate::render::canvas::{AsciiRenderer, CellType};
+use unicode_width::UnicodeWidthStr;
 
 pub trait ShapeDrawing {
     fn draw_box(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
@@ -77,7 +78,7 @@ impl ShapeDrawing for AsciiRenderer {
             if j >= h - 2 {
                 break;
             }
-            let line_len = line.chars().count();
+            let line_len = line.width();
             let safe_len = line_len.min(content_w_avail + 20);
             let display_text: String = line.chars().take(safe_len).collect();
 
@@ -139,11 +140,7 @@ impl ShapeDrawing for AsciiRenderer {
 
     fn draw_terminator(&mut self, mut x: usize, y: usize, w: usize, h: usize, text: &str) {
         // Shift 1 space right if text length is even to improve alignment with the center arrow
-        let content_w = text
-            .split('\n')
-            .map(|l| l.chars().count())
-            .max()
-            .unwrap_or(0);
+        let content_w = text.split('\n').map(|l| l.width()).max().unwrap_or(0);
         if content_w.is_multiple_of(2) {
             x += 1;
         }
@@ -165,7 +162,7 @@ impl ShapeDrawing for AsciiRenderer {
 
     fn draw_switch_case(&mut self, mut x: usize, y: usize, w: usize, _h: usize, text: &str) {
         // Shift 1 space right if text length is even to improve alignment with the center arrow
-        let content_w = text.chars().count();
+        let content_w = text.width();
         if content_w.is_multiple_of(2) {
             x += 1;
         }
@@ -177,7 +174,7 @@ impl ShapeDrawing for AsciiRenderer {
         }
 
         let text_with_parens = format!("( {} )", text);
-        let len = text_with_parens.chars().count();
+        let len = text_with_parens.width();
         let start_x = x + (w - len) / 2;
         self.draw_text(start_x, y, &text_with_parens);
     }
@@ -188,7 +185,7 @@ impl ShapeDrawing for AsciiRenderer {
         let start_y = y + (h - content_h) / 2;
 
         for (j, line) in lines.iter().enumerate() {
-            let line_len = line.chars().count();
+            let line_len = line.width();
             let start_x = x + (w - line_len) / 2;
             self.draw_text(start_x, start_y + j, line);
         }
@@ -201,7 +198,7 @@ impl ShapeDrawing for AsciiRenderer {
                 break;
             }
             let max_w = w.saturating_sub(2 + self.padding * 2);
-            let truncated: String = if line.chars().count() > max_w {
+            let truncated: String = if line.width() > max_w {
                 line.chars().take(max_w).collect()
             } else {
                 line.to_string()

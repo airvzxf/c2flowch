@@ -4,9 +4,12 @@ use crate::render::routing::RoutingDrawing;
 use crate::render::shapes::ShapeDrawing;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
+use unicode_width::UnicodeWidthStr;
 
 fn parse_id(id: &str) -> usize {
-    id.strip_prefix("node_").unwrap_or("0").parse().unwrap_or(0)
+    id.strip_prefix("node_")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
 }
 
 #[derive(Debug, Clone)]
@@ -270,10 +273,22 @@ impl<'a> LayoutEngine<'a> {
                 .get(&edge.to)
                 .context("Missing node_map for edge to")?;
 
-            let (x1, y1) = *self.node_pos.get(&edge.from).unwrap();
-            let dim1 = self.node_dims.get(&edge.from).unwrap();
-            let (x2, y2) = *self.node_pos.get(&edge.to).unwrap();
-            let dim2 = self.node_dims.get(&edge.to).unwrap();
+            let (x1, y1) = *self
+                .node_pos
+                .get(&edge.from)
+                .context("Missing node_pos for edge from")?;
+            let dim1 = self
+                .node_dims
+                .get(&edge.from)
+                .context("Missing node_dims for edge from")?;
+            let (x2, y2) = *self
+                .node_pos
+                .get(&edge.to)
+                .context("Missing node_pos for edge to")?;
+            let dim2 = self
+                .node_dims
+                .get(&edge.to)
+                .context("Missing node_dims for edge to")?;
 
             let is_decision =
                 n1.node_type == NodeType::Decision || n1.node_type == NodeType::SwitchCase;
@@ -626,7 +641,7 @@ pub(crate) fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) ->
     }
     let lines: Vec<&str> = node.text.split('\n').collect();
     let content_h = lines.len();
-    let content_w = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+    let content_w = lines.iter().map(|l| l.width()).max().unwrap_or(0);
 
     match node.node_type {
         NodeType::Decision => {

@@ -1,6 +1,6 @@
 use crate::ir::{FlowNode, NodeType};
 use crate::parser::core::C2Flowch;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use tree_sitter::Node;
 
 pub(crate) fn parse_translation_unit(
@@ -123,7 +123,9 @@ pub(crate) fn parse_if_statement(
     let mut current_last = last_node_id;
     let mut current_label = label;
 
-    let condition = node.child_by_field_name("condition").unwrap();
+    let condition = node
+        .child_by_field_name("condition")
+        .context("Missing condition in if statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
     let if_id = parser.next_id();
 
@@ -131,7 +133,6 @@ pub(crate) fn parse_if_statement(
         id: if_id.clone(),
         node_type: NodeType::Decision,
         text: cond_text
-            .to_string()
             .replace("(", "")
             .replace(")", "")
             .replace("==", "="),
@@ -144,7 +145,9 @@ pub(crate) fn parse_if_statement(
             .add_edge(&prev, &if_id, current_label.take());
     }
 
-    let consequence = node.child_by_field_name("consequence").unwrap();
+    let consequence = node
+        .child_by_field_name("consequence")
+        .context("Missing consequence in if statement")?;
     let true_last = parser.traverse(
         consequence,
         Some(if_id.clone()),
@@ -189,8 +192,12 @@ pub(crate) fn parse_while_statement(
     let mut current_last = last_node_id;
     let mut current_label = label;
 
-    let condition = node.child_by_field_name("condition").unwrap();
-    let body = node.child_by_field_name("body").unwrap();
+    let condition = node
+        .child_by_field_name("condition")
+        .context("Missing condition in while statement")?;
+    let body = node
+        .child_by_field_name("body")
+        .context("Missing body in while statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
     // 1. Pre-condition Merge (Join point for back-edge)
@@ -214,7 +221,6 @@ pub(crate) fn parse_while_statement(
         id: dec_id.clone(),
         node_type: NodeType::Decision,
         text: cond_text
-            .to_string()
             .replace("(", "")
             .replace(")", "")
             .replace("==", "="),
@@ -265,8 +271,12 @@ pub(crate) fn parse_do_statement(
     let mut current_last = last_node_id;
     let mut current_label = label;
 
-    let body = node.child_by_field_name("body").unwrap();
-    let condition = node.child_by_field_name("condition").unwrap();
+    let body = node
+        .child_by_field_name("body")
+        .context("Missing body in do statement")?;
+    let condition = node
+        .child_by_field_name("condition")
+        .context("Missing condition in do statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
     // Create exit node for breaks
@@ -303,7 +313,6 @@ pub(crate) fn parse_do_statement(
         id: dec_id.clone(),
         node_type: NodeType::Decision,
         text: cond_text
-            .to_string()
             .replace("(", "")
             .replace(")", "")
             .replace("==", "="),
@@ -341,7 +350,9 @@ pub(crate) fn parse_for_statement(
     let init = node.child_by_field_name("initializer");
     let cond = node.child_by_field_name("condition");
     let update = node.child_by_field_name("update");
-    let body = node.child_by_field_name("body").unwrap();
+    let body = node
+        .child_by_field_name("body")
+        .context("Missing body in for statement")?;
 
     // 1. Initializer
     if let Some(i) = init {
@@ -459,9 +470,11 @@ pub(crate) fn parse_switch_statement(
     let mut current_last = last_node_id;
     let mut current_label = label;
 
-    let condition = node.child_by_field_name("condition").unwrap();
+    let condition = node
+        .child_by_field_name("condition")
+        .context("Missing condition in switch statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
-    let cond_clean = cond_text.to_string().replace("(", "").replace(")", "");
+    let cond_clean = cond_text.replace("(", "").replace(")", "");
 
     let switch_id = parser.next_id();
     parser.flowchart.add_node(FlowNode {
@@ -487,7 +500,9 @@ pub(crate) fn parse_switch_statement(
 
     parser.loop_exits.push(exit_id.clone());
 
-    let body = node.child_by_field_name("body").unwrap();
+    let body = node
+        .child_by_field_name("body")
+        .context("Missing body in switch statement")?;
     let mut spine_last = switch_id.clone();
     let mut fallthrough_id: Option<String> = None;
     let mut prev_case_nodes: Vec<String> = Vec::new();
@@ -501,7 +516,9 @@ pub(crate) fn parse_switch_statement(
             let case_text = if is_default {
                 "default".to_string()
             } else {
-                let val_node = child.child_by_field_name("value").unwrap();
+                let val_node = child
+                    .child_by_field_name("value")
+                    .context("Missing value in case statement")?;
                 parser.code[val_node.start_byte()..val_node.end_byte()].to_string()
             };
 

@@ -1,3 +1,5 @@
+use unicode_width::UnicodeWidthChar;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CellType {
     Empty,
@@ -45,8 +47,13 @@ impl AsciiRenderer {
     pub fn draw_text(&mut self, x: usize, y: usize, text: &str) {
         let lines: Vec<&str> = text.split('\n').collect();
         for (j, line) in lines.iter().enumerate() {
-            for (i, c) in line.chars().enumerate() {
-                self.set_char_force(x + i, y + j, c, CellType::Text);
+            let mut current_x = x;
+            for c in line.chars() {
+                let width = c.width().unwrap_or(0);
+                if width > 0 {
+                    self.set_char_force(current_x, y + j, c, CellType::Text);
+                    current_x += width;
+                }
             }
         }
     }
