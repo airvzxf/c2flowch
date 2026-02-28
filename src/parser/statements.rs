@@ -25,52 +25,46 @@ pub(crate) fn parse_translation_unit(
             continue;
         }
 
-        // Try to group Preparation nodes (level 4+)
-        if parser.level >= 4
-            && crate::parser::utils::is_preparation(child, &parser.code)
-            && let Some(next_idx) = try_parse_group(
-                parser,
-                &children,
-                i,
+        // Define grouping rules: (NodeType, Check function, Condition to apply)
+        let rules = [
+            (
                 NodeType::Preparation,
-                crate::parser::utils::is_preparation,
-                &mut current_last,
-                &mut current_label,
-            )
-        {
-            i = next_idx;
-            continue;
-        }
-
-        // Try to group InputOutput nodes
-        if crate::parser::utils::is_io(child, &parser.code)
-            && let Some(next_idx) = try_parse_group(
-                parser,
-                &children,
-                i,
+                crate::parser::utils::is_preparation as fn(Node, &str) -> bool,
+                parser.level >= 4,
+            ),
+            (
                 NodeType::InputOutput,
-                crate::parser::utils::is_io,
-                &mut current_last,
-                &mut current_label,
-            )
-        {
-            i = next_idx;
-            continue;
+                crate::parser::utils::is_io as fn(Node, &str) -> bool,
+                true,
+            ),
+            (
+                NodeType::Process,
+                crate::parser::utils::is_process as fn(Node, &str) -> bool,
+                true,
+            ),
+        ];
+
+        let mut grouped = false;
+        for (node_type, check_fn, condition) in rules {
+            if condition
+                && check_fn(child, &parser.code)
+                && let Some(next_idx) = try_parse_group(
+                    parser,
+                    &children,
+                    i,
+                    node_type,
+                    check_fn,
+                    &mut current_last,
+                    &mut current_label,
+                )
+            {
+                i = next_idx;
+                grouped = true;
+                break;
+            }
         }
 
-        // Try to group Process nodes
-        if crate::parser::utils::is_process(child, &parser.code)
-            && let Some(next_idx) = try_parse_group(
-                parser,
-                &children,
-                i,
-                NodeType::Process,
-                crate::parser::utils::is_process,
-                &mut current_last,
-                &mut current_label,
-            )
-        {
-            i = next_idx;
+        if grouped {
             continue;
         }
 

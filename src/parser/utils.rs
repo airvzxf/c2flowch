@@ -126,6 +126,10 @@ pub(crate) fn process_printf(inner: &str) -> String {
     format!("Imprimir {}", parts.join(", "))
 }
 
+const IO_FUNCTIONS: &[&str] = &[
+    "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
+];
+
 pub(crate) fn clean_text(text: &str) -> String {
     let mut cleaned = text.trim().to_string();
 
@@ -245,14 +249,7 @@ pub(crate) fn clean_text(text: &str) -> String {
 pub(crate) fn is_io(node: Node, code: &str) -> bool {
     if node.kind() == "expression_statement" {
         let text = &code[node.start_byte()..node.end_byte()];
-        text.contains("printf(")
-            || text.contains("scanf(")
-            || text.contains("puts(")
-            || text.contains("gets(")
-            || text.contains("fputs(")
-            || text.contains("fgets(")
-            || text.contains("putchar(")
-            || text.contains("getchar(")
+        IO_FUNCTIONS.iter().any(|&f| text.contains(f))
     } else {
         false
     }
@@ -271,14 +268,7 @@ pub(crate) fn is_process(node: Node, code: &str) -> bool {
     match node.kind() {
         "expression_statement" => {
             let text = &code[node.start_byte()..node.end_byte()];
-            !text.contains("printf(")
-                && !text.contains("scanf(")
-                && !text.contains("puts(")
-                && !text.contains("gets(")
-                && !text.contains("fputs(")
-                && !text.contains("fgets(")
-                && !text.contains("putchar(")
-                && !text.contains("getchar(")
+            !IO_FUNCTIONS.iter().any(|&f| text.contains(f))
         }
         "declaration" => {
             let text = &code[node.start_byte()..node.end_byte()];

@@ -159,3 +159,42 @@ impl AsciiRenderer {
             .join("\n")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fix_junctions_plus() {
+        let mut r = AsciiRenderer::new(3, 3, 0);
+        // Create a + shape with lines
+        r.set_char(1, 0, '│', CellType::LineV);
+        r.set_char(1, 1, '┼', CellType::LineCorner); // This will be fixed anyway
+        r.set_char(1, 2, '│', CellType::LineV);
+        r.set_char(0, 1, '─', CellType::LineH);
+        r.set_char(2, 1, '─', CellType::LineH);
+
+        r.fix_junctions();
+        assert_eq!(r.canvas[1][1], '┼');
+    }
+
+    #[test]
+    fn test_fix_junctions_corners() {
+        let mut r = AsciiRenderer::new(3, 3, 0);
+        // Top-left corner
+        r.set_char(1, 1, '┌', CellType::LineCorner);
+        r.set_char(2, 1, '─', CellType::LineH);
+        r.set_char(1, 2, '│', CellType::LineV);
+
+        r.fix_junctions();
+        assert_eq!(r.canvas[1][1], '┌');
+
+        // Bottom-right corner
+        let mut r = AsciiRenderer::new(3, 3, 0);
+        r.set_char(1, 1, '┘', CellType::LineCorner);
+        r.set_char(0, 1, '─', CellType::LineH);
+        r.set_char(1, 0, '│', CellType::LineV);
+        r.fix_junctions();
+        assert_eq!(r.canvas[1][1], '┘');
+    }
+}
