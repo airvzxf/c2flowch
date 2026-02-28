@@ -272,7 +272,13 @@ impl AsciiRenderer {
             self.set_char_force(x, y2 - 1, '🭭', CellType::Arrow);
         }
         if let Some(lbl) = label {
-            self.draw_text(x + 3, y1, lbl);
+            if lbl == "Falso" {
+                let lbl_len = lbl.chars().count();
+                let tx = x.saturating_sub(lbl_len + 2);
+                self.draw_text(tx, y1, lbl);
+            } else {
+                self.draw_text(x + 3, y1, lbl);
+            }
         }
     }
 
