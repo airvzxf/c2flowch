@@ -72,11 +72,7 @@ fn main() -> Result<()> {
             let flowchart = C2Flowch::parse_file(&input, level)?;
             let yaml = flowchart.to_yaml()?;
 
-            let output_path = output.unwrap_or_else(|| {
-                let mut p = input.clone();
-                p.set_extension("yaml");
-                p
-            });
+            let output_path = output.unwrap_or_else(|| input.with_extension("yaml"));
 
             fs::write(&output_path, yaml)?;
             println!(
