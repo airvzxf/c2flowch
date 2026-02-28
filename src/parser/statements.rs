@@ -25,23 +25,31 @@ pub(crate) fn parse_translation_unit(
             continue;
         }
 
-        // Define grouping rules: (NodeType, Check function, Condition to apply)
-        let rules = [
-            (
-                NodeType::Preparation,
-                crate::parser::utils::is_preparation as fn(Node, &str) -> bool,
-                parser.level >= 4,
-            ),
-            (
-                NodeType::InputOutput,
-                crate::parser::utils::is_io as fn(Node, &str) -> bool,
-                true,
-            ),
-            (
-                NodeType::Process,
-                crate::parser::utils::is_process as fn(Node, &str) -> bool,
-                true,
-            ),
+        let check_prep = |n: Node, c: &str| crate::parser::utils::is_preparation(n, c);
+        let check_io = |n: Node, c: &str| crate::parser::utils::is_io(n, c);
+        let keys: Vec<String> = parser.known_functions.keys().cloned().collect();
+        let keys_clone = keys.clone();
+        let check_predef = move |n: Node, c: &str| {
+            if !crate::parser::utils::is_process(n, c) {
+                return false;
+            }
+            let text = &c[n.start_byte()..n.end_byte()];
+            keys.iter().any(|k| text.contains(&format!("{}(", k)))
+        };
+        let check_proc = move |n: Node, c: &str| {
+            if !crate::parser::utils::is_process(n, c) {
+                return false;
+            }
+            let text = &c[n.start_byte()..n.end_byte()];
+            !keys_clone.iter().any(|k| text.contains(&format!("{}(", k)))
+        };
+
+        type RuleFn<'a> = &'a dyn Fn(Node, &str) -> bool;
+        let rules: [(NodeType, RuleFn, bool); 4] = [
+            (NodeType::Preparation, &check_prep, parser.level >= 4),
+            (NodeType::InputOutput, &check_io, true),
+            (NodeType::PredefinedProcess, &check_predef, true),
+            (NodeType::Process, &check_proc, true),
         ];
 
         let mut grouped = false;
@@ -115,11 +123,15 @@ where
     }
 
     if !group_text.is_empty() {
+        let full_text = group_text.join("\n");
+
+        parser.check_and_enqueue_subroutines(&full_text);
+
         let node_id = parser.next_id();
         parser.flowchart.add_node(FlowNode {
             id: node_id.clone(),
             node_type,
-            text: group_text.join("\n"),
+            text: full_text,
             source_line: Some(child.start_position().row + 1),
         });
         if let Some(prev) = current_last.take() {
@@ -147,15 +159,15 @@ pub(crate) fn parse_if_statement(
         .child_by_field_name("condition")
         .context("Missing condition in if statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
+
+    parser.check_and_enqueue_subroutines(&cond_text);
+
     let if_id = parser.next_id();
 
     parser.flowchart.add_node(FlowNode {
         id: if_id.clone(),
         node_type: NodeType::Decision,
-        text: cond_text
-            .replace("(", "")
-            .replace(")", "")
-            .replace("==", "="),
+        text: crate::parser::utils::clean_condition(&cond_text),
         source_line: Some(node.start_position().row + 1),
     });
 
@@ -223,6 +235,8 @@ pub(crate) fn parse_while_statement(
         .context("Missing body in while statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
+    parser.check_and_enqueue_subroutines(&cond_text);
+
     // 1. Pre-condition Merge (Join point for back-edge)
     let join_cond_id = parser.next_id();
     parser.flowchart.add_node(FlowNode {
@@ -243,10 +257,7 @@ pub(crate) fn parse_while_statement(
     parser.flowchart.add_node(FlowNode {
         id: dec_id.clone(),
         node_type: NodeType::Decision,
-        text: cond_text
-            .replace("(", "")
-            .replace(")", "")
-            .replace("==", "="),
+        text: crate::parser::utils::clean_condition(&cond_text),
         source_line: Some(condition.start_position().row + 1),
     });
 
@@ -306,6 +317,8 @@ pub(crate) fn parse_do_statement(
         .context("Missing condition in do statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
 
+    parser.check_and_enqueue_subroutines(&cond_text);
+
     // Create exit node for breaks
     let exit_id = parser.next_id();
     parser.flowchart.add_node(FlowNode {
@@ -339,10 +352,7 @@ pub(crate) fn parse_do_statement(
     parser.flowchart.add_node(FlowNode {
         id: dec_id.clone(),
         node_type: NodeType::Decision,
-        text: cond_text
-            .replace("(", "")
-            .replace(")", "")
-            .replace("==", "="),
+        text: crate::parser::utils::clean_condition(&cond_text),
         source_line: Some(condition.start_position().row + 1),
     });
 
@@ -418,11 +428,9 @@ pub(crate) fn parse_for_statement(
     // 3. Decision (Condition)
     let dec_id = parser.next_id();
     let cond_text = if let Some(c) = cond {
-        parser.code[c.start_byte()..c.end_byte()]
-            .to_string()
-            .replace("(", "")
-            .replace(")", "")
-            .replace("==", "=")
+        let text = parser.code[c.start_byte()..c.end_byte()].to_string();
+        parser.check_and_enqueue_subroutines(&text);
+        crate::parser::utils::clean_condition(&text)
     } else {
         "true".to_string()
     };
@@ -505,7 +513,10 @@ pub(crate) fn parse_switch_statement(
         .child_by_field_name("condition")
         .context("Missing condition in switch statement")?;
     let cond_text = parser.code[condition.start_byte()..condition.end_byte()].to_string();
-    let cond_clean = cond_text.replace("(", "").replace(")", "");
+
+    parser.check_and_enqueue_subroutines(&cond_text);
+
+    let cond_clean = crate::parser::utils::clean_condition(&cond_text);
 
     let switch_id = parser.next_id();
     parser.flowchart.add_node(FlowNode {
@@ -659,10 +670,28 @@ pub(crate) fn parse_return_statement(
     let mut current_label = label;
 
     let node_id = parser.next_id();
+
+    let raw_text = parser.code[node.start_byte()..node.end_byte()].to_string();
+    let text = if parser.is_main {
+        "Fin".to_string()
+    } else {
+        let clean = raw_text
+            .replace("return", "")
+            .replace(";", "")
+            .trim()
+            .to_string();
+        let clean = crate::parser::utils::remove_pointer_syntax(&clean);
+        if clean.trim().is_empty() {
+            "Retornar".to_string()
+        } else {
+            format!("Retornar: {}", clean.trim())
+        }
+    };
+
     parser.flowchart.add_node(FlowNode {
         id: node_id.clone(),
         node_type: NodeType::Terminator,
-        text: "Fin".to_string(),
+        text,
         source_line: Some(node.start_position().row + 1),
     });
     if let Some(prev) = current_last {

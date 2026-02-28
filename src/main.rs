@@ -3,7 +3,6 @@ mod parser;
 mod render;
 
 use crate::ir::Flowchart;
-use crate::parser::C2Flowch;
 use crate::render::render_flowchart;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -69,7 +68,7 @@ fn main() -> Result<()> {
             level,
         } => {
             println!("Parsing {:?} with detail level {}...", input, level);
-            let flowchart = C2Flowch::parse_file(&input, level)?;
+            let flowchart = crate::parser::parse_file(&input, level)?;
             let yaml = flowchart.to_yaml()?;
 
             let output_path = output.unwrap_or_else(|| input.with_extension("yaml"));

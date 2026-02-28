@@ -11,6 +11,8 @@ pub enum NodeType {
     Terminator,
     /// Simple operation (assignment, function call)
     Process,
+    /// Function call (Predefined Process)
+    PredefinedProcess,
     /// Condition (if, switch, while)
     Decision,
     /// A single case within a switch statement
@@ -44,6 +46,8 @@ pub struct Flowchart {
     pub title: String,
     pub nodes: Vec<FlowNode>,
     pub edges: Vec<FlowEdge>,
+    #[serde(default)]
+    pub subroutines: Vec<Flowchart>,
 }
 
 impl Flowchart {

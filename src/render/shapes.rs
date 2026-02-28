@@ -3,6 +3,7 @@ use unicode_width::UnicodeWidthStr;
 
 pub trait ShapeDrawing {
     fn draw_box(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
+    fn draw_predefined_process(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
     fn draw_parallelogram(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
     fn draw_rhombus(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
     fn draw_terminator(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str);
@@ -38,6 +39,60 @@ impl ShapeDrawing for AsciiRenderer {
         }
 
         self.draw_content_text(x, y, w, h, text);
+    }
+
+    fn draw_predefined_process(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
+        if w < 6 || h < 2 {
+            return;
+        }
+        // Standard Box
+        self.set_char_force(x, y, '┌', CellType::Node);
+        self.set_char_force(x + w - 1, y, '┐', CellType::Node);
+        self.set_char_force(x, y + h - 1, '└', CellType::Node);
+        self.set_char_force(x + w - 1, y + h - 1, '┘', CellType::Node);
+
+        for i in 1..w - 1 {
+            self.set_char_force(x + i, y, '─', CellType::Node);
+            self.set_char_force(x + i, y + h - 1, '─', CellType::Node);
+        }
+        for j in 1..h - 1 {
+            self.set_char_force(x, y + j, '│', CellType::Node);
+            self.set_char_force(x + w - 1, y + j, '│', CellType::Node);
+        }
+
+        // Inner double vertical lines
+        self.set_char_force(x + 2, y, '┬', CellType::Node);
+        self.set_char_force(x + w - 3, y, '┬', CellType::Node);
+        self.set_char_force(x + 2, y + h - 1, '┴', CellType::Node);
+        self.set_char_force(x + w - 3, y + h - 1, '┴', CellType::Node);
+
+        for j in 1..h - 1 {
+            self.set_char_force(x + 2, y + j, '│', CellType::Node);
+            self.set_char_force(x + w - 3, y + j, '│', CellType::Node);
+        }
+
+        // Fill background
+        for j in 1..h - 1 {
+            for i in 3..w - 3 {
+                self.set_char_force(x + i, y + j, ' ', CellType::Node);
+            }
+        }
+
+        let lines: Vec<&str> = text.split('\n').collect();
+        for (j, line) in lines.iter().enumerate() {
+            if j >= h - 2 {
+                break;
+            }
+            let max_w = w.saturating_sub(6 + self.padding * 2);
+            let truncated: String = if line.width() > max_w {
+                line.chars().take(max_w).collect()
+            } else {
+                line.to_string()
+            };
+            let tx = x + 3 + self.padding;
+            let ty = y + 1 + j;
+            self.draw_text(tx, ty, &truncated);
+        }
     }
 
     fn draw_parallelogram(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {

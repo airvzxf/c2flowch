@@ -234,6 +234,9 @@ impl<'a> LayoutEngine<'a> {
                     renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text)
                 }
                 NodeType::SwitchCase => renderer.draw_switch_case(*x, *y, dim.w, dim.h, &node.text),
+                NodeType::PredefinedProcess => {
+                    renderer.draw_predefined_process(*x, *y, dim.w, dim.h, &node.text)
+                }
                 _ => renderer.draw_box(*x, *y, dim.w, dim.h, &node.text),
             }
         }
@@ -571,6 +574,25 @@ impl<'a> LayoutEngine<'a> {
 }
 
 pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
+    let mut final_render = render_flowchart_single(flowchart)?;
+
+    for sub in &flowchart.subroutines {
+        final_render.push_str("\n\n\n");
+        let separator = format!(
+            "=========================================================\n            [ Subrutina: {} ]\n=========================================================",
+            sub.title
+        );
+        final_render.push_str(&separator);
+        final_render.push_str("\n\n");
+
+        let sub_render = render_flowchart_single(sub)?;
+        final_render.push_str(&sub_render);
+    }
+
+    Ok(final_render)
+}
+
+fn render_flowchart_single(flowchart: &Flowchart) -> Result<String> {
     let padding = 3;
     let mut renderer = AsciiRenderer::new(2000, 5000, padding);
 
@@ -717,6 +739,15 @@ pub(crate) fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) ->
             let h = 1;
             let w = content_w + 4;
             (w, h)
+        }
+        NodeType::PredefinedProcess => {
+            let h = content_h + 2;
+            let w = content_w + padding * 2 + 6;
+            let mut final_w = w;
+            if final_w % 2 != 0 {
+                final_w += 1;
+            }
+            (final_w, h)
         }
         NodeType::InputOutput => {
             let h = content_h + 2;

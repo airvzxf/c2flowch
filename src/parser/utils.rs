@@ -126,12 +126,110 @@ pub(crate) fn process_printf(inner: &str) -> String {
     format!("Imprimir {}", parts.join(", "))
 }
 
+pub(crate) fn remove_pointer_syntax(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let chars: Vec<char> = text.chars().collect();
+    let mut i = 0;
+    let mut in_quote = false;
+
+    while i < chars.len() {
+        let c = chars[i];
+
+        if c == '"' && (i == 0 || chars[i - 1] != '\\') {
+            in_quote = !in_quote;
+        }
+
+        if !in_quote {
+            if c == '&' && i + 1 < chars.len() && chars[i + 1] == '&' {
+                result.push('&');
+                result.push('&');
+                i += 2;
+                continue;
+            }
+
+            if (c == '*' || c == '&') && i + 1 < chars.len() && chars[i + 1] == '=' {
+                result.push(c);
+                result.push('=');
+                i += 2;
+                continue;
+            }
+
+            if c == '&' || c == '*' {
+                let mut is_unary = false;
+                if i == 0 {
+                    is_unary = true;
+                } else {
+                    let mut j = i.saturating_sub(1);
+                    while j > 0 && chars[j].is_whitespace() {
+                        j -= 1;
+                    }
+                    let prev = chars[j];
+                    if prev == '('
+                        || prev == '['
+                        || prev == ','
+                        || prev == '='
+                        || prev == '+'
+                        || prev == '-'
+                        || prev == '*'
+                        || prev == '/'
+                        || prev == '<'
+                        || prev == '>'
+                        || prev == '!'
+                        || prev == '&'
+                        || prev == '|'
+                        || prev == ':'
+                        || prev == '?'
+                        || prev == '{'
+                        || prev == ';'
+                    {
+                        is_unary = true;
+                    } else if prev.is_alphabetic() {
+                        let mut k = j;
+                        while k > 0 && chars[k - 1].is_alphanumeric() {
+                            k -= 1;
+                        }
+                        let word: String = chars[k..=j].iter().collect();
+                        if matches!(
+                            word.as_str(),
+                            "return"
+                                | "case"
+                                | "if"
+                                | "while"
+                                | "int"
+                                | "char"
+                                | "float"
+                                | "double"
+                                | "void"
+                                | "struct"
+                                | "long"
+                                | "short"
+                                | "unsigned"
+                                | "signed"
+                        ) {
+                            is_unary = true;
+                        }
+                    }
+                }
+
+                if is_unary {
+                    i += 1;
+                    continue;
+                }
+            }
+        }
+
+        result.push(c);
+        i += 1;
+    }
+    result
+}
+
 const IO_FUNCTIONS: &[&str] = &[
     "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
 ];
 
 pub(crate) fn clean_text(text: &str) -> String {
-    let mut cleaned = text.trim().to_string();
+    let mut cleaned = remove_pointer_syntax(text.trim());
 
     let keywords = [
         "short unsigned ",
@@ -153,6 +251,14 @@ pub(crate) fn clean_text(text: &str) -> String {
             cleaned = cleaned[kw.len()..].to_string();
         }
         cleaned = cleaned.replace(&format!(" {}", kw), " ");
+    }
+
+    // Strip "struct XYZ " if it is at the beginning
+    if cleaned.starts_with("struct ")
+        && let Some(space_idx) = cleaned[7..].find(' ')
+    {
+        let next_word_end = 7 + space_idx;
+        cleaned = cleaned[next_word_end..].trim().to_string();
     }
 
     cleaned = cleaned.replace(";", "").trim().to_string();
@@ -277,6 +383,14 @@ pub(crate) fn is_process(node: Node, code: &str) -> bool {
         "update_expression" => true,
         _ => false,
     }
+}
+
+pub(crate) fn clean_condition(text: &str) -> String {
+    let mut cleaned = remove_pointer_syntax(text.trim());
+    if cleaned.starts_with('(') && cleaned.ends_with(')') {
+        cleaned = cleaned[1..cleaned.len() - 1].to_string();
+    }
+    cleaned.replace("==", "=").to_string()
 }
 
 #[cfg(test)]
