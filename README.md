@@ -23,14 +23,13 @@ Currently supports:
 ```
 
 ## Testing
-To run the automated black-box tests and verify the C-to-YAML and YAML-to-ASCII pipeline:
+To run the automated unit tests:
 ```bash
 cargo test
 ```
-These tests compare the generated YAML and ASCII outputs with the reference files in `resources/c/` and `resources/ascii/`.
 
 ## Features
-- **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Rounded Rects (Terminator).
+- **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Parenthesized (Terminator).
 - **Correct Padding**: Every node has symmetric 3-space padding, accounting for visual width of multi-byte characters like `ñ` and `í`.
 - **Level of Detail**: Filter out variable declarations or focus only on function calls.
 - **Human-in-the-loop**: The YAML intermediate format allows users to refine the diagram before final rendering.

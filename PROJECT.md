@@ -12,7 +12,6 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **User:** Needs a "magic button" with control over detail.
 - **Architect:** Uses `tree-sitter-c` for robust parsing; avoids custom C parsers.
 - **UX/UI:** Clean CLI flow: `parse` -> `edit` -> `render`.
-- **QA:** Regression testing via black-box suite for C -> YAML -> ASCII pipeline.
 
 ### Technical Architecture
 1. **Parser (Rust + Tree-sitter):** CST generation.
@@ -27,12 +26,10 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **Language:** Rust
 - **Parser:** tree-sitter-c
 - **Core Pipeline:** Functional C -> YAML -> ASCII pipeline.
-- **Testing:** Automated black-box integration tests for 4 reference files.
 - **Recent Achievements:**
     - [x] Symmetric 3-space padding for all nodes.
     - [x] Full UTF-8 support for Spanish characters (ñ, á, etc.).
     - [x] Safe string truncation to prevent panics.
-    - [x] Implementation of the initial regression test suite.
 
 ---
 
@@ -49,7 +46,6 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **i18n:** Formal support for multiple languages (Spanish priority).
 - [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
-- [x] **Black-box Testing:** Regression suite implementation.
 
 ### Phase 5: Expansion
 - [ ] **SVG Export:** Native SVG writer or Graphviz backend.
