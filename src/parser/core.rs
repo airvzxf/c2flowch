@@ -9,10 +9,11 @@ pub struct C2Flowch {
     pub(crate) node_count: usize,
     pub(crate) loop_exits: Vec<String>,
     pub(crate) code: String,
+    pub(crate) level: u8,
 }
 
 impl C2Flowch {
-    pub fn new(title: String, _level: u8, code: String) -> Self {
+    pub fn new(title: String, level: u8, code: String) -> Self {
         Self {
             flowchart: Flowchart {
                 title,
@@ -22,6 +23,7 @@ impl C2Flowch {
             node_count: 0,
             loop_exits: Vec::new(),
             code,
+            level,
         }
     }
 

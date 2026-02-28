@@ -1,4 +1,6 @@
-use crate::ir::{Flowchart, NodeType};
+use crate::ir::{
+    EDGE_LABEL_BREAK, EDGE_LABEL_DEPENDENCY, EDGE_LABEL_FALSE, EDGE_LABEL_TRUE, Flowchart, NodeType,
+};
 use crate::render::canvas::AsciiRenderer;
 use crate::render::routing::RoutingDrawing;
 use crate::render::shapes::ShapeDrawing;
@@ -256,7 +258,7 @@ impl<'a> LayoutEngine<'a> {
 
     pub fn draw_edges(&self, renderer: &mut AsciiRenderer) -> Result<()> {
         for edge in &self.flowchart.edges {
-            if edge.label.as_deref() == Some("Dependency") {
+            if edge.label.as_deref() == Some(EDGE_LABEL_DEPENDENCY) {
                 continue;
             }
 
@@ -292,7 +294,7 @@ impl<'a> LayoutEngine<'a> {
 
             let is_decision =
                 n1.node_type == NodeType::Decision || n1.node_type == NodeType::SwitchCase;
-            let mut label = edge.label.as_deref();
+            let label = edge.label.as_deref();
             let is_target_merge = n2.text.starts_with("Merge");
 
             let n1_id_num: usize = parse_id(&edge.from);
@@ -312,201 +314,35 @@ impl<'a> LayoutEngine<'a> {
             let is_back_edge = n1_id_num > n2_id_num && !n2.text.contains("Exit");
 
             if is_back_edge {
-                let is_while_for = n2.node_type == NodeType::Decision
-                    || (n2.text == "Merge"
-                        && self.flowchart.edges.iter().any(|e| {
-                            e.from == edge.to
-                                && self
-                                    .nodes_map
-                                    .get(&e.to)
-                                    .is_some_and(|m| m.node_type == NodeType::Decision)
-                        }));
-                let use_right_side = is_while_for || dim1.lane > 0;
-
-                let mut depth_inside = 0;
-                for other_edge in &self.flowchart.edges {
-                    if let Some(m1_id_part) = other_edge.from.strip_prefix("node_")
-                        && let Some(m2_id_part) = other_edge.to.strip_prefix("node_")
-                        && let m1_id_num_inner = m1_id_part.parse::<usize>().unwrap_or(0)
-                        && let m2_id_num_inner = m2_id_part.parse::<usize>().unwrap_or(0)
-                        && m1_id_num_inner > m2_id_num_inner
-                        && ((m2_id_num_inner > n2_id_num && m1_id_num_inner < n1_id_num)
-                            || (m2_id_num_inner == n2_id_num
-                                && m1_id_num_inner == n1_id_num
-                                && other_edge.from < edge.from))
-                    {
-                        depth_inside += 1;
-                    }
-                }
-
-                let is_bottom_exit = n1.node_type != NodeType::Decision;
-
-                let join_y = if is_target_merge {
-                    y2
-                } else {
-                    y2.saturating_sub(3)
-                };
-
-                if use_right_side {
-                    let mut max_x = x1 + dim1.w;
-                    for (id, (px, _)) in &self.node_pos {
-                        let id_num: usize = parse_id(id);
-                        if id_num >= n2_id_num && id_num <= n1_id_num {
-                            let dim = self.node_dims.get(id).context("Missing node_dim")?;
-                            max_x = max_x.max(px + dim.w);
-                        }
-                    }
-
-                    let sx = if is_bottom_exit {
-                        x1 + dim1.w / 2
-                    } else {
-                        x1 + dim1.w - 1
-                    };
-                    let sy = if is_bottom_exit {
-                        y1 + dim1.h
-                    } else {
-                        y1 + dim1.h / 2
-                    };
-                    let tx = x2 + dim2.w / 2;
-                    let ty = y2;
-                    let margin_x = max_x + 4 + depth_inside * 4;
-                    renderer.draw_loop_back_right(
-                        sx,
-                        sy,
-                        tx,
-                        ty,
-                        margin_x,
-                        label,
-                        is_bottom_exit,
-                        !is_target_merge,
-                        join_y,
-                    );
-                } else {
-                    let sx = if is_bottom_exit { x1 + dim1.w / 2 } else { x1 };
-                    let sy = if is_bottom_exit {
-                        y1 + dim1.h
-                    } else {
-                        y1 + dim1.h / 2
-                    };
-                    let tx = x2 + dim2.w / 2;
-                    let ty = y2;
-                    let margin_x = 10u64.saturating_sub(depth_inside as u64 * 4) as usize;
-                    renderer.draw_loop_back(
-                        sx,
-                        sy,
-                        tx,
-                        ty,
-                        margin_x.max(1),
-                        label,
-                        is_bottom_exit,
-                        !is_target_merge,
-                        join_y,
-                    );
-                }
+                self.draw_back_edge(
+                    renderer,
+                    edge,
+                    (x1, y1, dim1),
+                    (x2, y2, dim2),
+                    is_target_merge,
+                )?;
+            } else if label == Some(EDGE_LABEL_BREAK) {
+                self.draw_break_edge(renderer, (x1, y1, dim1), (x2, y2, dim2))?;
             } else if is_loop_head {
-                if label == Some("Verdadero") {
-                    let sx = x1 + dim1.w - 1;
-                    let sy = y1 + dim1.h / 2;
-                    let ty = y2;
-                    renderer.draw_elbow_right_down(
-                        sx,
-                        sy,
-                        x2 + dim2.w / 2,
-                        ty,
-                        Some("Verdadero"),
-                        !is_target_merge,
-                    );
-                } else if label == Some("Falso") {
-                    let sx = x1 + dim1.w / 2;
-                    let sy = y1 + dim1.h;
-                    let ty = y2;
-                    renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some("Falso"));
-                } else {
-                    let sx = x1 + dim1.w / 2;
-                    let sy = y1 + dim1.h;
-                    let ty = y2;
-                    renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
-                }
-            } else if is_decision && label == Some("Verdadero") {
-                let mut sx = x1 + dim1.w - 1;
-                let mut display_label = "Verdadero";
-
-                if n1.node_type == NodeType::SwitchCase {
-                    sx += 2;
-                    display_label = "Verdadero";
-                }
-
-                let sy = y1 + dim1.h / 2;
-                let ty = y2;
-                renderer.draw_elbow_right_down(
-                    sx,
-                    sy,
-                    x2 + dim2.w / 2,
-                    ty,
-                    Some(display_label),
-                    !is_target_merge,
+                self.draw_loop_head_edge(
+                    renderer,
+                    label,
+                    (x1, y1, dim1),
+                    (x2, y2, dim2),
+                    is_target_merge,
                 );
-            } else if is_decision && label == Some("Falso") {
-                let sx = x1 + dim1.w / 2;
-                let sy = y1 + dim1.h;
-                let ty = y2;
-                renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some("Falso"));
-            } else if label == Some("__Break__") {
-                let sx = x1 + dim1.w / 2;
-                let sy = y1 + dim1.h;
-                let tx = x2 + dim2.w / 2;
-                let ty = y2;
-
-                let max_l = *self.lanes_width.keys().max().unwrap_or(&0);
-                let collector_x = self.lane_x.get(&max_l).context("Missing max lane x")?
-                    + self
-                        .lanes_width
-                        .get(&max_l)
-                        .context("Missing max lane width")?
-                    + 8;
-
-                let y_turn = sy + 2;
-                renderer.draw_vertical_line(sx, sy, y_turn, false, None);
-
-                renderer.set_char_force(
-                    sx,
-                    y_turn,
-                    '└',
-                    crate::render::canvas::CellType::LineCorner,
+            } else if is_decision {
+                self.draw_decision_edge(
+                    renderer,
+                    n1,
+                    label,
+                    (x1, y1, dim1),
+                    (x2, y2, dim2),
+                    is_target_merge,
                 );
-                for x in (sx + 1)..collector_x {
-                    renderer.set_char_force(x, y_turn, '─', crate::render::canvas::CellType::LineH);
-                }
-
-                renderer.set_char_force(
-                    collector_x,
-                    y_turn,
-                    '┐',
-                    crate::render::canvas::CellType::LineCorner,
-                );
-                renderer.draw_vertical_line(collector_x, y_turn + 1, ty, false, None);
-
-                renderer.set_char_force(
-                    collector_x,
-                    ty,
-                    '┘',
-                    crate::render::canvas::CellType::LineCorner,
-                );
-                for x in (tx + 2)..collector_x {
-                    renderer.set_char_force(x, ty, '─', crate::render::canvas::CellType::LineH);
-                }
-                renderer.set_char_force(tx + 1, ty, '🭮', crate::render::canvas::CellType::Arrow);
-                renderer.set_char_force(tx, ty, '├', crate::render::canvas::CellType::LineCorner);
             } else if is_target_merge {
-                let sx = x1 + dim1.w / 2;
-                let sy = y1 + dim1.h;
-                let tx = x2 + dim2.w / 2;
-                let ty = y2;
-                renderer.draw_merge_left(sx, sy, tx, ty);
+                renderer.draw_merge_left(x1 + dim1.w / 2, y1 + dim1.h, x2 + dim2.w / 2, y2);
             } else {
-                if is_decision && label.is_none() && n1.text.contains("opcion != 2") {
-                    label = Some("Falso");
-                }
                 let sx = x1 + dim1.w / 2;
                 let sy = y1 + dim1.h;
                 let ty = y2;
@@ -514,6 +350,239 @@ impl<'a> LayoutEngine<'a> {
             }
         }
         Ok(())
+    }
+
+    fn draw_back_edge(
+        &self,
+        renderer: &mut AsciiRenderer,
+        edge: &crate::ir::FlowEdge,
+        (x1, y1, dim1): (usize, usize, &NodeDim),
+        (x2, y2, dim2): (usize, usize, &NodeDim),
+        is_target_merge: bool,
+    ) -> Result<()> {
+        let n1_id_num = parse_id(&edge.from);
+        let n2_id_num = parse_id(&edge.to);
+        let n2 = self.nodes_map.get(&edge.to).unwrap();
+        let n1 = self.nodes_map.get(&edge.from).unwrap();
+
+        let is_while_for = n2.node_type == NodeType::Decision
+            || (n2.text == "Merge"
+                && self.flowchart.edges.iter().any(|e| {
+                    e.from == edge.to
+                        && self
+                            .nodes_map
+                            .get(&e.to)
+                            .is_some_and(|m| m.node_type == NodeType::Decision)
+                }));
+        let use_right_side = is_while_for || dim1.lane > 0;
+
+        let mut depth_inside = 0;
+        for other_edge in &self.flowchart.edges {
+            if let Some(m1_id_part) = other_edge.from.strip_prefix("node_")
+                && let Some(m2_id_part) = other_edge.to.strip_prefix("node_")
+                && let m1_id_num_inner = m1_id_part.parse::<usize>().unwrap_or(0)
+                && let m2_id_num_inner = m2_id_part.parse::<usize>().unwrap_or(0)
+                && m1_id_num_inner > m2_id_num_inner
+                && ((m2_id_num_inner > n2_id_num && m1_id_num_inner < n1_id_num)
+                    || (m2_id_num_inner == n2_id_num
+                        && m1_id_num_inner == n1_id_num
+                        && other_edge.from < edge.from))
+            {
+                depth_inside += 1;
+            }
+        }
+
+        let is_bottom_exit = n1.node_type != NodeType::Decision;
+
+        let join_y = if is_target_merge {
+            y2
+        } else {
+            y2.saturating_sub(3)
+        };
+
+        if use_right_side {
+            let mut max_x = x1 + dim1.w;
+            for (id, (px, _)) in &self.node_pos {
+                let id_num: usize = parse_id(id);
+                if id_num >= n2_id_num && id_num <= n1_id_num {
+                    let dim = self.node_dims.get(id).context("Missing node_dim")?;
+                    max_x = max_x.max(px + dim.w);
+                }
+            }
+
+            let sx = if is_bottom_exit {
+                x1 + dim1.w / 2
+            } else {
+                x1 + dim1.w - 1
+            };
+            let sy = if is_bottom_exit {
+                y1 + dim1.h
+            } else {
+                y1 + dim1.h / 2
+            };
+            let tx = x2 + dim2.w / 2;
+            let ty = y2;
+            let margin_x = max_x + 4 + depth_inside * 4;
+            renderer.draw_loop_back_right(
+                sx,
+                sy,
+                tx,
+                ty,
+                margin_x,
+                edge.label.as_deref(),
+                is_bottom_exit,
+                !is_target_merge,
+                join_y,
+            );
+        } else {
+            let sx = if is_bottom_exit { x1 + dim1.w / 2 } else { x1 };
+            let sy = if is_bottom_exit {
+                y1 + dim1.h
+            } else {
+                y1 + dim1.h / 2
+            };
+            let tx = x2 + dim2.w / 2;
+            let ty = y2;
+            let margin_x = 10u64.saturating_sub(depth_inside as u64 * 4) as usize;
+            renderer.draw_loop_back(
+                sx,
+                sy,
+                tx,
+                ty,
+                margin_x.max(1),
+                edge.label.as_deref(),
+                is_bottom_exit,
+                !is_target_merge,
+                join_y,
+            );
+        }
+        Ok(())
+    }
+
+    fn draw_break_edge(
+        &self,
+        renderer: &mut AsciiRenderer,
+        (x1, y1, dim1): (usize, usize, &NodeDim),
+        (x2, y2, dim2): (usize, usize, &NodeDim),
+    ) -> Result<()> {
+        let sx = x1 + dim1.w / 2;
+        let sy = y1 + dim1.h;
+        let tx = x2 + dim2.w / 2;
+        let ty = y2;
+
+        let max_l = *self.lanes_width.keys().max().unwrap_or(&0);
+        let collector_x = self.lane_x.get(&max_l).context("Missing max lane x")?
+            + self
+                .lanes_width
+                .get(&max_l)
+                .context("Missing max lane width")?
+            + 8;
+
+        let y_turn = sy + 2;
+        renderer.draw_vertical_line(sx, sy, y_turn, false, None);
+
+        renderer.set_char_force(sx, y_turn, '└', crate::render::canvas::CellType::LineCorner);
+        for x in (sx + 1)..collector_x {
+            renderer.set_char_force(x, y_turn, '─', crate::render::canvas::CellType::LineH);
+        }
+
+        renderer.set_char_force(
+            collector_x,
+            y_turn,
+            '┐',
+            crate::render::canvas::CellType::LineCorner,
+        );
+        renderer.draw_vertical_line(collector_x, y_turn + 1, ty, false, None);
+
+        renderer.set_char_force(
+            collector_x,
+            ty,
+            '┘',
+            crate::render::canvas::CellType::LineCorner,
+        );
+        for x in (tx + 2)..collector_x {
+            renderer.set_char_force(x, ty, '─', crate::render::canvas::CellType::LineH);
+        }
+        renderer.set_char_force(tx + 1, ty, '🭮', crate::render::canvas::CellType::Arrow);
+        renderer.set_char_force(tx, ty, '├', crate::render::canvas::CellType::LineCorner);
+        Ok(())
+    }
+
+    fn draw_loop_head_edge(
+        &self,
+        renderer: &mut AsciiRenderer,
+        label: Option<&str>,
+        (x1, y1, dim1): (usize, usize, &NodeDim),
+        (x2, y2, dim2): (usize, usize, &NodeDim),
+        is_target_merge: bool,
+    ) {
+        if label == Some(EDGE_LABEL_TRUE) {
+            let sx = x1 + dim1.w - 1;
+            let sy = y1 + dim1.h / 2;
+            let ty = y2;
+            renderer.draw_elbow_right_down(
+                sx,
+                sy,
+                x2 + dim2.w / 2,
+                ty,
+                Some(EDGE_LABEL_TRUE),
+                !is_target_merge,
+            );
+        } else if label == Some(EDGE_LABEL_FALSE) {
+            let sx = x1 + dim1.w / 2;
+            let sy = y1 + dim1.h;
+            let ty = y2;
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(EDGE_LABEL_FALSE));
+        } else {
+            let sx = x1 + dim1.w / 2;
+            let sy = y1 + dim1.h;
+            let ty = y2;
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+        }
+    }
+
+    fn draw_decision_edge(
+        &self,
+        renderer: &mut AsciiRenderer,
+        n1: &crate::ir::FlowNode,
+        mut label: Option<&str>,
+        (x1, y1, dim1): (usize, usize, &NodeDim),
+        (x2, y2, dim2): (usize, usize, &NodeDim),
+        is_target_merge: bool,
+    ) {
+        if label == Some(EDGE_LABEL_TRUE) {
+            let mut sx = x1 + dim1.w - 1;
+            let mut display_label = EDGE_LABEL_TRUE;
+
+            if n1.node_type == NodeType::SwitchCase {
+                sx += 2;
+                display_label = EDGE_LABEL_TRUE;
+            }
+
+            let sy = y1 + dim1.h / 2;
+            let ty = y2;
+            renderer.draw_elbow_right_down(
+                sx,
+                sy,
+                x2 + dim2.w / 2,
+                ty,
+                Some(display_label),
+                !is_target_merge,
+            );
+        } else if label == Some(EDGE_LABEL_FALSE) {
+            let sx = x1 + dim1.w / 2;
+            let sy = y1 + dim1.h;
+            let ty = y2;
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(EDGE_LABEL_FALSE));
+        } else {
+            if label.is_none() && n1.text.contains("opcion != 2") {
+                label = Some(EDGE_LABEL_FALSE);
+            }
+            let sx = x1 + dim1.w / 2;
+            let sy = y1 + dim1.h;
+            let ty = y2;
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+        }
     }
 }
 
@@ -576,19 +645,19 @@ pub(crate) fn traverse_assign_lanes(
         let lb = b.label.as_deref().unwrap_or("");
 
         if is_loop_head {
-            if la == "Falso" {
+            if la == EDGE_LABEL_FALSE {
                 return std::cmp::Ordering::Less;
             }
-            if lb == "Falso" {
+            if lb == EDGE_LABEL_FALSE {
                 return std::cmp::Ordering::Greater;
             }
         }
 
-        if la == "Falso" {
+        if la == EDGE_LABEL_FALSE {
             std::cmp::Ordering::Less
-        } else if lb == "Falso" || la == "Verdadero" {
+        } else if lb == EDGE_LABEL_FALSE || la == EDGE_LABEL_TRUE {
             std::cmp::Ordering::Greater
-        } else if lb == "Verdadero" {
+        } else if lb == EDGE_LABEL_TRUE {
             std::cmp::Ordering::Less
         } else {
             std::cmp::Ordering::Equal
@@ -603,7 +672,7 @@ pub(crate) fn traverse_assign_lanes(
             .context("Missing context edge node")?;
         let is_exit = target_node.text.contains("Exit");
 
-        if is_exit && edge.label.as_deref() != Some("Falso") {
+        if is_exit && edge.label.as_deref() != Some(EDGE_LABEL_FALSE) {
             continue;
         }
 
@@ -614,12 +683,12 @@ pub(crate) fn traverse_assign_lanes(
         let next_lane_start = if node.text == "Merge" {
             lane
         } else if is_loop_head {
-            if edge.label.as_deref() == Some("Falso") || edge.label.is_none() {
+            if edge.label.as_deref() == Some(EDGE_LABEL_FALSE) || edge.label.is_none() {
                 lane
             } else {
                 max_lane + 1
             }
-        } else if edge.label.as_deref() == Some("Verdadero") {
+        } else if edge.label.as_deref() == Some(EDGE_LABEL_TRUE) {
             max_lane + 1
         } else {
             lane

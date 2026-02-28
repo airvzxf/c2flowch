@@ -258,6 +258,15 @@ pub(crate) fn is_io(node: Node, code: &str) -> bool {
     }
 }
 
+pub(crate) fn is_preparation(node: Node, code: &str) -> bool {
+    if node.kind() == "declaration" {
+        let text = &code[node.start_byte()..node.end_byte()];
+        !text.contains("=") && !text.contains("++") && !text.contains("--")
+    } else {
+        false
+    }
+}
+
 pub(crate) fn is_process(node: Node, code: &str) -> bool {
     match node.kind() {
         "expression_statement" => {
