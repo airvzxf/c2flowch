@@ -25,119 +25,52 @@ pub(crate) fn parse_translation_unit(
             continue;
         }
 
-        if parser.level >= 4 && crate::parser::utils::is_preparation(child, &parser.code) {
-            let mut group_text = Vec::new();
-            let mut j = i;
-            while j < children.len() {
-                if children[j].kind() == "comment" {
-                    j += 1;
-                    continue;
-                }
-                if crate::parser::utils::is_preparation(children[j], &parser.code) {
-                    let text = crate::parser::utils::clean_text(
-                        &parser.code[children[j].start_byte()..children[j].end_byte()],
-                    );
-                    if !text.is_empty() {
-                        group_text.push(text);
-                    }
-                    j += 1;
-                } else {
-                    break;
-                }
-            }
-
-            if !group_text.is_empty() {
-                let node_id = parser.next_id();
-                parser.flowchart.add_node(FlowNode {
-                    id: node_id.clone(),
-                    node_type: NodeType::Preparation,
-                    text: group_text.join("\n"),
-                    source_line: Some(child.start_position().row + 1),
-                });
-                if let Some(prev) = current_last {
-                    parser
-                        .flowchart
-                        .add_edge(&prev, &node_id, current_label.take()); // Consume label here
-                }
-                current_last = Some(node_id);
-            }
-            i = j;
+        // Try to group Preparation nodes (level 4+)
+        if parser.level >= 4
+            && crate::parser::utils::is_preparation(child, &parser.code)
+            && let Some(next_idx) = try_parse_group(
+                parser,
+                &children,
+                i,
+                NodeType::Preparation,
+                crate::parser::utils::is_preparation,
+                &mut current_last,
+                &mut current_label,
+            )
+        {
+            i = next_idx;
             continue;
-        } else if crate::parser::utils::is_io(child, &parser.code) {
-            let mut group_text = Vec::new();
-            let mut j = i;
-            while j < children.len() {
-                if children[j].kind() == "comment" {
-                    j += 1;
-                    continue;
-                }
-                if crate::parser::utils::is_io(children[j], &parser.code) {
-                    let text = crate::parser::utils::clean_text(
-                        &parser.code[children[j].start_byte()..children[j].end_byte()],
-                    );
-                    if !text.is_empty() {
-                        group_text.push(text);
-                    }
-                    j += 1;
-                } else {
-                    break;
-                }
-            }
+        }
 
-            if !group_text.is_empty() {
-                let node_id = parser.next_id();
-                parser.flowchart.add_node(FlowNode {
-                    id: node_id.clone(),
-                    node_type: NodeType::InputOutput,
-                    text: group_text.join("\n"),
-                    source_line: Some(child.start_position().row + 1),
-                });
-                if let Some(prev) = current_last {
-                    parser
-                        .flowchart
-                        .add_edge(&prev, &node_id, current_label.take()); // Consume label here
-                }
-                current_last = Some(node_id);
-            }
-            i = j;
+        // Try to group InputOutput nodes
+        if crate::parser::utils::is_io(child, &parser.code)
+            && let Some(next_idx) = try_parse_group(
+                parser,
+                &children,
+                i,
+                NodeType::InputOutput,
+                crate::parser::utils::is_io,
+                &mut current_last,
+                &mut current_label,
+            )
+        {
+            i = next_idx;
             continue;
-        } else if crate::parser::utils::is_process(child, &parser.code) {
-            let mut group_text = Vec::new();
-            let mut j = i;
-            while j < children.len() {
-                if children[j].kind() == "comment" {
-                    j += 1;
-                    continue;
-                }
-                if crate::parser::utils::is_process(children[j], &parser.code) {
-                    let text = crate::parser::utils::clean_text(
-                        &parser.code[children[j].start_byte()..children[j].end_byte()],
-                    );
-                    if !text.is_empty() {
-                        group_text.push(text);
-                    }
-                    j += 1;
-                } else {
-                    break;
-                }
-            }
+        }
 
-            if !group_text.is_empty() {
-                let node_id = parser.next_id();
-                parser.flowchart.add_node(FlowNode {
-                    id: node_id.clone(),
-                    node_type: NodeType::Process,
-                    text: group_text.join("\n"),
-                    source_line: Some(child.start_position().row + 1),
-                });
-                if let Some(prev) = current_last {
-                    parser
-                        .flowchart
-                        .add_edge(&prev, &node_id, current_label.take()); // Consume label here
-                }
-                current_last = Some(node_id);
-            }
-            i = j;
+        // Try to group Process nodes
+        if crate::parser::utils::is_process(child, &parser.code)
+            && let Some(next_idx) = try_parse_group(
+                parser,
+                &children,
+                i,
+                NodeType::Process,
+                crate::parser::utils::is_process,
+                &mut current_last,
+                &mut current_label,
+            )
+        {
+            i = next_idx;
             continue;
         }
 
@@ -152,6 +85,59 @@ pub(crate) fn parse_translation_unit(
     }
 
     Ok(current_last)
+}
+
+fn try_parse_group<F>(
+    parser: &mut C2Flowch,
+    children: &[Node],
+    start_index: usize,
+    node_type: NodeType,
+    check_fn: F,
+    current_last: &mut Option<String>,
+    current_label: &mut Option<String>,
+) -> Option<usize>
+where
+    F: Fn(Node, &str) -> bool,
+{
+    let child = children[start_index];
+    let mut group_text = Vec::new();
+    let mut j = start_index;
+
+    while j < children.len() {
+        let c = children[j];
+        if c.kind() == "comment" {
+            j += 1;
+            continue;
+        }
+        if check_fn(c, &parser.code) {
+            let text = crate::parser::utils::clean_text(&parser.code[c.start_byte()..c.end_byte()]);
+            if !text.is_empty() {
+                group_text.push(text);
+            }
+            j += 1;
+        } else {
+            break;
+        }
+    }
+
+    if !group_text.is_empty() {
+        let node_id = parser.next_id();
+        parser.flowchart.add_node(FlowNode {
+            id: node_id.clone(),
+            node_type,
+            text: group_text.join("\n"),
+            source_line: Some(child.start_position().row + 1),
+        });
+        if let Some(prev) = current_last.take() {
+            parser
+                .flowchart
+                .add_edge(&prev, &node_id, current_label.take());
+        }
+        *current_last = Some(node_id);
+        Some(j)
+    } else {
+        None
+    }
 }
 
 pub(crate) fn parse_if_statement(

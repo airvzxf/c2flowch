@@ -18,6 +18,21 @@ struct Cli {
     command: Commands,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug, PartialEq)]
+enum RenderFormat {
+    Ascii,
+    Svg,
+}
+
+impl std::fmt::Display for RenderFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RenderFormat::Ascii => write!(f, "ascii"),
+            RenderFormat::Svg => write!(f, "svg"),
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Parse C code and generate an intermediate YAML representation
@@ -40,7 +55,7 @@ enum Commands {
         output: Option<PathBuf>,
         /// Format (ascii, svg)
         #[arg(short, long, default_value = "ascii")]
-        format: String,
+        format: RenderFormat,
     },
 }
 
@@ -78,16 +93,19 @@ fn main() -> Result<()> {
             let yaml = fs::read_to_string(&input)?;
             let flowchart = Flowchart::from_yaml(&yaml)?;
 
-            if format == "ascii" {
-                let result = render_flowchart(&flowchart)?;
-                if let Some(out_path) = output {
-                    fs::write(&out_path, &result)?;
-                    println!("Diagram saved to {:?}", out_path);
-                } else {
-                    println!("{}", result);
+            match format {
+                RenderFormat::Ascii => {
+                    let result = render_flowchart(&flowchart)?;
+                    if let Some(out_path) = output {
+                        fs::write(&out_path, &result)?;
+                        println!("Diagram saved to {:?}", out_path);
+                    } else {
+                        println!("{}", result);
+                    }
                 }
-            } else {
-                return Err(anyhow::anyhow!("Format {} not supported yet", format));
+                RenderFormat::Svg => {
+                    return Err(anyhow::anyhow!("Format svg not supported yet"));
+                }
             }
         }
     }
