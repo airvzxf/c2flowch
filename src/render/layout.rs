@@ -23,7 +23,8 @@ pub(crate) struct NodeDim {
 
 pub(crate) struct TraversalContext<'a> {
     pub nodes_map: &'a HashMap<String, &'a crate::ir::FlowNode>,
-    pub flowchart: &'a Flowchart,
+    pub parents_map: &'a HashMap<String, Vec<&'a crate::ir::FlowEdge>>,
+    pub children_map: &'a HashMap<String, Vec<&'a crate::ir::FlowEdge>>,
     pub visited: &'a mut HashMap<String, usize>,
     pub node_dims: &'a mut HashMap<String, NodeDim>,
     pub lanes_width: &'a mut HashMap<usize, usize>,
@@ -33,6 +34,8 @@ pub(crate) struct TraversalContext<'a> {
 pub struct LayoutEngine<'a> {
     flowchart: &'a Flowchart,
     nodes_map: HashMap<String, &'a crate::ir::FlowNode>,
+    parents_map: HashMap<String, Vec<&'a crate::ir::FlowEdge>>,
+    children_map: HashMap<String, Vec<&'a crate::ir::FlowEdge>>,
     node_dims: HashMap<String, NodeDim>,
     lanes_width: HashMap<usize, usize>,
     lane_x: HashMap<usize, usize>,
@@ -47,9 +50,22 @@ impl<'a> LayoutEngine<'a> {
         let nodes_map: HashMap<String, &'a crate::ir::FlowNode> =
             flowchart.nodes.iter().map(|n| (n.id.clone(), n)).collect();
 
+        let mut parents_map: HashMap<String, Vec<&'a crate::ir::FlowEdge>> = HashMap::new();
+        let mut children_map: HashMap<String, Vec<&'a crate::ir::FlowEdge>> = HashMap::new();
+
+        for edge in &flowchart.edges {
+            parents_map.entry(edge.to.clone()).or_default().push(edge);
+            children_map
+                .entry(edge.from.clone())
+                .or_default()
+                .push(edge);
+        }
+
         Self {
             flowchart,
             nodes_map,
+            parents_map,
+            children_map,
             node_dims: HashMap::new(),
             lanes_width: HashMap::new(),
             lane_x: HashMap::new(),
@@ -65,7 +81,8 @@ impl<'a> LayoutEngine<'a> {
         if let Some(start_node) = self.flowchart.nodes.first() {
             let mut ctx = TraversalContext {
                 nodes_map: &self.nodes_map,
-                flowchart: self.flowchart,
+                parents_map: &self.parents_map,
+                children_map: &self.children_map,
                 visited: &mut visited,
                 node_dims: &mut self.node_dims,
                 lanes_width: &mut self.lanes_width,
@@ -115,24 +132,18 @@ impl<'a> LayoutEngine<'a> {
         }
 
         let mut progress = true;
+        let empty_parents: Vec<&crate::ir::FlowEdge> = Vec::new();
         while progress && !pending_nodes.is_empty() {
             progress = false;
             let mut next_batch = Vec::new();
 
             for id in &pending_nodes {
-                let parents: Vec<&crate::ir::FlowEdge> = self
-                    .flowchart
-                    .edges
-                    .iter()
-                    .filter(|e| e.to == *id)
-                    .collect();
+                let parents = self.parents_map.get(id).unwrap_or(&empty_parents);
 
                 let c_id_num: usize = parse_id(id);
                 let is_exit = self
-                    .flowchart
-                    .nodes
-                    .iter()
-                    .find(|n| n.id == *id)
+                    .nodes_map
+                    .get(id)
                     .is_some_and(|n| n.text == "MergeExit");
 
                 let ready_parents: Vec<_> = parents
@@ -290,16 +301,21 @@ impl<'a> LayoutEngine<'a> {
             let n1_id_num: usize = parse_id(&edge.from);
             let n2_id_num: usize = parse_id(&edge.to);
 
+            let empty_edges: Vec<&crate::ir::FlowEdge> = Vec::new();
+
             let is_loop_head = is_decision
-                && self.flowchart.edges.iter().any(|e| {
-                    if e.to == edge.from
-                        && let Some(f_id_part) = e.from.strip_prefix("node_")
-                    {
-                        let f_id_num = f_id_part.parse::<usize>().unwrap_or(0);
-                        return f_id_num > n1_id_num;
-                    }
-                    false
-                });
+                && self
+                    .parents_map
+                    .get(&edge.from)
+                    .unwrap_or(&empty_edges)
+                    .iter()
+                    .any(|e| {
+                        if let Some(f_id_part) = e.from.strip_prefix("node_") {
+                            let f_id_num = f_id_part.parse::<usize>().unwrap_or(0);
+                            return f_id_num > n1_id_num;
+                        }
+                        false
+                    });
 
             let is_back_edge = n1_id_num > n2_id_num && n2.text != "MergeExit";
 
@@ -361,15 +377,19 @@ impl<'a> LayoutEngine<'a> {
             .get(&edge.from)
             .context("Node not found for back edge source")?;
 
+        let empty_edges: Vec<&crate::ir::FlowEdge> = Vec::new();
         let is_while_for = n2.node_type == NodeType::Decision
             || (n2.text == "Merge"
-                && self.flowchart.edges.iter().any(|e| {
-                    e.from == edge.to
-                        && self
-                            .nodes_map
+                && self
+                    .children_map
+                    .get(&edge.to)
+                    .unwrap_or(&empty_edges)
+                    .iter()
+                    .any(|e| {
+                        self.nodes_map
                             .get(&e.to)
                             .is_some_and(|m| m.node_type == NodeType::Decision)
-                }));
+                    }));
         let use_right_side = is_while_for || dim1.lane > 0;
 
         let mut depth_inside = 0;
@@ -651,23 +671,23 @@ pub(crate) fn traverse_assign_lanes(
 
     let mut max_lane = lane;
 
-    let mut edges: Vec<&crate::ir::FlowEdge> = ctx
-        .flowchart
-        .edges
-        .iter()
-        .filter(|e| e.from == *id)
-        .collect();
+    let empty_edges: Vec<&crate::ir::FlowEdge> = Vec::new();
+    let mut edges: Vec<&crate::ir::FlowEdge> =
+        ctx.children_map.get(id).unwrap_or(&empty_edges).clone();
 
     let n_id_num: usize = parse_id(id);
-    let is_loop_head = ctx.flowchart.edges.iter().any(|e| {
-        if e.to == id
-            && let Some(f_id_part) = e.from.strip_prefix("node_")
-        {
-            let f_id_num = f_id_part.parse::<usize>().unwrap_or(0);
-            return f_id_num > n_id_num;
-        }
-        false
-    });
+    let is_loop_head = ctx
+        .parents_map
+        .get(id)
+        .unwrap_or(&empty_edges)
+        .iter()
+        .any(|e| {
+            if let Some(f_id_part) = e.from.strip_prefix("node_") {
+                let f_id_num = f_id_part.parse::<usize>().unwrap_or(0);
+                return f_id_num > n_id_num;
+            }
+            false
+        });
 
     edges.sort_by(|a, b| {
         let la = a.label.as_deref().unwrap_or("");
