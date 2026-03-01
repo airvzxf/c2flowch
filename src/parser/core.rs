@@ -56,7 +56,7 @@ impl<'a> C2Flowch<'a> {
 
     pub fn check_and_enqueue_subroutines(&mut self, text: &str) {
         for k in &self.sorted_func_names {
-            if text.contains(&format!("{}(", k))
+            if text.contains(&format!("{k}("))
                 && !self.processed_functions.contains(k)
                 && !self.queue.contains(k)
             {
@@ -121,9 +121,9 @@ impl<'a> C2Flowch<'a> {
         } else {
             let params_text = self.extract_parameters(node);
             if params_text.is_empty() || params_text == "()" {
-                format!("Inicio: {}()", name)
+                format!("Inicio: {name}()")
             } else {
-                format!("Inicio: {}{}", name, params_text)
+                format!("Inicio: {name}{params_text}")
             }
         };
 

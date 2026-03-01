@@ -195,7 +195,11 @@ impl ShapeDrawing for AsciiRenderer {
 
     fn draw_terminator(&mut self, mut x: usize, y: usize, w: usize, h: usize, text: &str) {
         // Shift 1 space right if text length is even to improve alignment with the center arrow
-        let content_w = text.split('\n').map(|l| l.width()).max().unwrap_or(0);
+        let content_w = text
+            .split('\n')
+            .map(unicode_width::UnicodeWidthStr::width)
+            .max()
+            .unwrap_or(0);
         if content_w.is_multiple_of(2) {
             x += 1;
         }
@@ -228,7 +232,7 @@ impl ShapeDrawing for AsciiRenderer {
             self.set_char_force(x + i, y, ' ', CellType::Node);
         }
 
-        let text_with_parens = format!("( {} )", text);
+        let text_with_parens = format!("( {text} )");
         let len = text_with_parens.width();
         let start_x = x + (w - len) / 2;
         self.draw_text(start_x, y, &text_with_parens);

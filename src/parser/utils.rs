@@ -222,7 +222,7 @@ pub(crate) fn clean_text(text: &str) -> String {
             cleaned = cleaned[kw.len()..].to_string();
         }
         if cleaned.contains(kw) {
-            cleaned = cleaned.replace(&format!(" {}", kw), " ");
+            cleaned = cleaned.replace(&format!(" {kw}"), " ");
         }
     }
 
@@ -259,7 +259,7 @@ pub(crate) fn clean_text(text: &str) -> String {
                 if call == "scanf(" {
                     if let Some(comma_pos) = inner.find(',') {
                         let var = inner[comma_pos + 1..].trim().replace('&', "");
-                        return format!("Leer {}", var);
+                        return format!("Leer {var}");
                     }
                     return "Leer".to_string();
                 }
@@ -293,10 +293,9 @@ pub(crate) fn clean_text(text: &str) -> String {
                 || expr.contains('%');
 
             if is_complex {
-                return format!("{} ← {} {} ({})", var, var, symbol, expr);
-            } else {
-                return format!("{} ← {} {} {}", var, var, symbol, expr);
+                return format!("{var} ← {var} {symbol} ({expr})");
             }
+            return format!("{var} ← {var} {symbol} {expr}");
         }
     }
 
@@ -326,7 +325,7 @@ pub(crate) fn clean_text(text: &str) -> String {
 
         if !var.contains('(') {
             let symbol = if is_inc { "+" } else { "-" };
-            return format!("{} ← {} {} 1", var, var, symbol);
+            return format!("{var} ← {var} {symbol} 1");
         }
     }
 
@@ -410,13 +409,12 @@ pub(crate) fn simplify_strcmp(mut text: String) -> String {
                     }
                 }
 
-                if !op.is_empty() {
-                    text = format!("{}{} {}{}", args[0], op, args[1], val);
-                    continue;
-                } else {
+                if op.is_empty() {
                     text = format!("{} = {}{}", args[0], args[1], rest);
                     continue;
                 }
+                text = format!("{}{} {}{}", args[0], op, args[1], val);
+                continue;
             }
         }
         break;
@@ -430,7 +428,7 @@ pub(crate) fn clean_condition(text: &str) -> String {
         cleaned = cleaned[1..cleaned.len() - 1].to_string();
     }
     cleaned = simplify_strcmp(cleaned);
-    cleaned.replace("==", "=").to_string()
+    cleaned.replace("==", "=").clone()
 }
 
 #[cfg(test)]

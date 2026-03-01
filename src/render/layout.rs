@@ -133,8 +133,7 @@ impl<'a> LayoutEngine<'a> {
                     .nodes
                     .iter()
                     .find(|n| n.id == *id)
-                    .map(|n| n.text.contains("Exit"))
-                    .unwrap_or(false);
+                    .is_some_and(|n| n.text.contains("Exit"));
 
                 let ready_parents: Vec<_> = parents
                     .iter()
@@ -231,11 +230,11 @@ impl<'a> LayoutEngine<'a> {
                 NodeType::Terminator => renderer.draw_terminator(*x, *y, dim.w, dim.h, &node.text),
                 NodeType::Decision => renderer.draw_rhombus(*x, *y, dim.w, dim.h, &node.text),
                 NodeType::InputOutput => {
-                    renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text)
+                    renderer.draw_parallelogram(*x, *y, dim.w, dim.h, &node.text);
                 }
                 NodeType::SwitchCase => renderer.draw_switch_case(*x, *y, dim.w, dim.h, &node.text),
                 NodeType::PredefinedProcess => {
-                    renderer.draw_predefined_process(*x, *y, dim.w, dim.h, &node.text)
+                    renderer.draw_predefined_process(*x, *y, dim.w, dim.h, &node.text);
                 }
                 _ => renderer.draw_box(*x, *y, dim.w, dim.h, &node.text),
             }

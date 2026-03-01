@@ -38,7 +38,7 @@ pub(crate) fn parse_translation_unit(
             let text = &c[n.start_byte()..n.end_byte()];
             keys_for_predef
                 .iter()
-                .any(|k| text.contains(&format!("{}(", k)))
+                .any(|k| text.contains(&format!("{k}(")))
         };
 
         let keys_for_proc = keys.clone();
@@ -49,7 +49,7 @@ pub(crate) fn parse_translation_unit(
             let text = &c[n.start_byte()..n.end_byte()];
             !keys_for_proc
                 .iter()
-                .any(|k| text.contains(&format!("{}(", k)))
+                .any(|k| text.contains(&format!("{k}(")))
         };
 
         type RuleFn<'a> = &'a dyn Fn(Node, &str) -> bool;
@@ -130,7 +130,9 @@ where
         }
     }
 
-    if !group_text.is_empty() {
+    if group_text.is_empty() {
+        None
+    } else {
         let full_text = group_text.join("\n");
 
         parser.check_and_enqueue_subroutines(&full_text);
@@ -149,8 +151,6 @@ where
         }
         *current_last = Some(node_id);
         Some(j)
-    } else {
-        None
     }
 }
 
@@ -685,7 +685,7 @@ pub(crate) fn parse_return_statement(
     } else {
         let clean = raw_text
             .replace("return", "")
-            .replace(";", "")
+            .replace(';', "")
             .trim()
             .to_string();
         let clean = crate::parser::utils::remove_pointer_syntax(&clean);

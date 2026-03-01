@@ -67,7 +67,7 @@ fn main() -> Result<()> {
             output,
             level,
         } => {
-            println!("Parsing {:?} with detail level {}...", input, level);
+            println!("Parsing {} with detail level {level}...", input.display());
             let flowchart = crate::parser::parse_file(&input, level)?;
             let yaml = flowchart.to_yaml()?;
 
@@ -75,8 +75,8 @@ fn main() -> Result<()> {
 
             fs::write(&output_path, yaml)?;
             println!(
-                "Success! Intermediate representation saved to {:?}",
-                output_path
+                "Success! Intermediate representation saved to {}",
+                output_path.display()
             );
         }
         Commands::Render {
@@ -84,7 +84,7 @@ fn main() -> Result<()> {
             output,
             format,
         } => {
-            println!("Rendering {:?} as {}...", input, format);
+            println!("Rendering {} as {format}...", input.display());
             let yaml = fs::read_to_string(&input)?;
             let flowchart = Flowchart::from_yaml(&yaml)?;
 
@@ -93,9 +93,9 @@ fn main() -> Result<()> {
                     let result = render_flowchart(&flowchart)?;
                     if let Some(out_path) = output {
                         fs::write(&out_path, &result)?;
-                        println!("Diagram saved to {:?}", out_path);
+                        println!("Diagram saved to {}", out_path.display());
                     } else {
-                        println!("{}", result);
+                        println!("{result}");
                     }
                 }
                 RenderFormat::Svg => {
