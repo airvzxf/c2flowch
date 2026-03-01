@@ -16,6 +16,11 @@ pub(crate) fn parse_translation_unit(
 
     let mut cursor = node.walk();
     let children: Vec<Node> = node.children(&mut cursor).collect();
+
+    let keys: Vec<String> = parser.known_functions.keys().cloned().collect();
+    let check_prep = |n: Node, c: &str| crate::parser::utils::is_preparation(n, c);
+    let check_io = |n: Node, c: &str| crate::parser::utils::is_io(n, c);
+
     let mut i = 0;
     while i < children.len() {
         let child = children[i];
@@ -25,23 +30,26 @@ pub(crate) fn parse_translation_unit(
             continue;
         }
 
-        let check_prep = |n: Node, c: &str| crate::parser::utils::is_preparation(n, c);
-        let check_io = |n: Node, c: &str| crate::parser::utils::is_io(n, c);
-        let keys: Vec<String> = parser.known_functions.keys().cloned().collect();
-        let keys_clone = keys.clone();
+        let keys_for_predef = keys.clone();
         let check_predef = move |n: Node, c: &str| {
             if !crate::parser::utils::is_process(n, c) {
                 return false;
             }
             let text = &c[n.start_byte()..n.end_byte()];
-            keys.iter().any(|k| text.contains(&format!("{}(", k)))
+            keys_for_predef
+                .iter()
+                .any(|k| text.contains(&format!("{}(", k)))
         };
+
+        let keys_for_proc = keys.clone();
         let check_proc = move |n: Node, c: &str| {
             if !crate::parser::utils::is_process(n, c) {
                 return false;
             }
             let text = &c[n.start_byte()..n.end_byte()];
-            !keys_clone.iter().any(|k| text.contains(&format!("{}(", k)))
+            !keys_for_proc
+                .iter()
+                .any(|k| text.contains(&format!("{}(", k)))
         };
 
         type RuleFn<'a> = &'a dyn Fn(Node, &str) -> bool;

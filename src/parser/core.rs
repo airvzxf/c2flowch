@@ -65,6 +65,53 @@ impl<'a> C2Flowch<'a> {
         }
     }
 
+    fn extract_parameters(&self, node: Node) -> String {
+        let mut params_text = String::new();
+        if let Some(decl) = node.child_by_field_name("declarator") {
+            let mut current = decl;
+            while current.kind() != "function_declarator" {
+                if let Some(n) = current.child_by_field_name("declarator") {
+                    current = n;
+                } else if let Some(first_child) = current.child(0) {
+                    current = first_child;
+                } else {
+                    break;
+                }
+            }
+            if current.kind() == "function_declarator"
+                && let Some(params) = current.child_by_field_name("parameters")
+            {
+                let mut param_names = Vec::new();
+                let mut p_cursor = params.walk();
+                for param in params.children(&mut p_cursor) {
+                    if param.kind() == "parameter_declaration"
+                        && let Some(decl) = param.child_by_field_name("declarator")
+                    {
+                        let mut name_node = decl;
+                        loop {
+                            if name_node.kind() == "identifier" {
+                                break;
+                            } else if let Some(n) = name_node.child_by_field_name("declarator") {
+                                name_node = n;
+                            } else if let Some(first_child) = name_node.child(0) {
+                                name_node = first_child;
+                            } else {
+                                break;
+                            }
+                        }
+                        if name_node.kind() == "identifier" {
+                            param_names.push(
+                                self.code[name_node.start_byte()..name_node.end_byte()].to_string(),
+                            );
+                        }
+                    }
+                }
+                params_text = format!("({})", param_names.join(", "));
+            }
+        }
+        params_text
+    }
+
     fn parse_function(&mut self, name: &str, node: Node, is_main: bool) -> Result<()> {
         self.is_main = is_main;
         let start_id = self.next_id();
@@ -72,51 +119,7 @@ impl<'a> C2Flowch<'a> {
         let start_text = if is_main {
             "Inicio".to_string()
         } else {
-            let mut params_text = String::new();
-            if let Some(decl) = node.child_by_field_name("declarator") {
-                let mut current = decl;
-                while current.kind() != "function_declarator" {
-                    if let Some(n) = current.child_by_field_name("declarator") {
-                        current = n;
-                    } else if let Some(first_child) = current.child(0) {
-                        current = first_child;
-                    } else {
-                        break;
-                    }
-                }
-                if current.kind() == "function_declarator"
-                    && let Some(params) = current.child_by_field_name("parameters")
-                {
-                    let mut param_names = Vec::new();
-                    let mut p_cursor = params.walk();
-                    for param in params.children(&mut p_cursor) {
-                        if param.kind() == "parameter_declaration"
-                            && let Some(decl) = param.child_by_field_name("declarator")
-                        {
-                            let mut name_node = decl;
-                            loop {
-                                if name_node.kind() == "identifier" {
-                                    break;
-                                } else if let Some(n) = name_node.child_by_field_name("declarator")
-                                {
-                                    name_node = n;
-                                } else if let Some(first_child) = name_node.child(0) {
-                                    name_node = first_child;
-                                } else {
-                                    break;
-                                }
-                            }
-                            if name_node.kind() == "identifier" {
-                                param_names.push(
-                                    self.code[name_node.start_byte()..name_node.end_byte()]
-                                        .to_string(),
-                                );
-                            }
-                        }
-                    }
-                    params_text = format!("({})", param_names.join(", "));
-                }
-            }
+            let params_text = self.extract_parameters(node);
             if params_text.is_empty() || params_text == "()" {
                 format!("Inicio: {}()", name)
             } else {

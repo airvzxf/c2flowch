@@ -42,7 +42,7 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
         /// Level of detail (1-5)
-        #[arg(short, long, default_value_t = 3)]
+        #[arg(short, long, default_value_t = 3, value_parser = clap::value_parser!(u8).range(1..=5))]
         level: u8,
     },
     /// Render a flowchart from an intermediate YAML representation
