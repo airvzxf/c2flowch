@@ -349,8 +349,14 @@ impl<'a> LayoutEngine<'a> {
     ) -> Result<()> {
         let n1_id_num = parse_id(&edge.from);
         let n2_id_num = parse_id(&edge.to);
-        let n2 = self.nodes_map.get(&edge.to).unwrap();
-        let n1 = self.nodes_map.get(&edge.from).unwrap();
+        let n2 = self
+            .nodes_map
+            .get(&edge.to)
+            .context("Node not found for back edge target")?;
+        let n1 = self
+            .nodes_map
+            .get(&edge.from)
+            .context("Node not found for back edge source")?;
 
         let is_while_for = n2.node_type == NodeType::Decision
             || (n2.text == "Merge"

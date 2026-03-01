@@ -1,8 +1,28 @@
+use std::sync::LazyLock;
 use tree_sitter::Node;
 
-const IO_FUNCTIONS: &[&str] = &[
-    "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
-];
+static IO_FUNCTIONS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    vec![
+        "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
+    ]
+});
+
+static KEYWORDS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    vec![
+        "short unsigned ",
+        "unsigned short ",
+        "short ",
+        "unsigned ",
+        "int ",
+        "char ",
+        "double ",
+        "const ",
+        "float ",
+        "long ",
+        "void ",
+        "static ",
+    ]
+});
 
 pub(crate) fn split_args(s: &str) -> Vec<String> {
     let mut args = Vec::new();
@@ -197,26 +217,13 @@ pub(crate) fn remove_pointer_syntax(text: &str) -> String {
 pub(crate) fn clean_text(text: &str) -> String {
     let mut cleaned = remove_pointer_syntax(text.trim()).replace("\\n", "");
 
-    let keywords = [
-        "short unsigned ",
-        "unsigned short ",
-        "short ",
-        "unsigned ",
-        "int ",
-        "char ",
-        "double ",
-        "const ",
-        "float ",
-        "long ",
-        "void ",
-        "static ",
-    ];
-
-    for kw in keywords {
+    for kw in KEYWORDS.iter() {
         if cleaned.starts_with(kw) {
             cleaned = cleaned[kw.len()..].to_string();
         }
-        cleaned = cleaned.replace(&format!(" {}", kw), " ");
+        if cleaned.contains(kw) {
+            cleaned = cleaned.replace(&format!(" {}", kw), " ");
+        }
     }
 
     // Strip "struct XYZ " if it is at the beginning
@@ -227,7 +234,7 @@ pub(crate) fn clean_text(text: &str) -> String {
         cleaned = cleaned[next_word_end..].trim().to_string();
     }
 
-    cleaned = cleaned.replace(";", "").trim().to_string();
+    cleaned = cleaned.replace(';', "").trim().to_string();
 
     for &call in &["printf(", "puts(", "fputs(", "putchar("] {
         if let Some(start) = cleaned.find(call) {
@@ -251,14 +258,14 @@ pub(crate) fn clean_text(text: &str) -> String {
                 let inner = &cleaned[start + call.len()..cleaned.len() - 1];
                 if call == "scanf(" {
                     if let Some(comma_pos) = inner.find(',') {
-                        let var = inner[comma_pos + 1..].trim().replace("&", "");
+                        let var = inner[comma_pos + 1..].trim().replace('&', "");
                         return format!("Leer {}", var);
                     }
                     return "Leer".to_string();
                 }
                 let args = split_args(inner);
                 if !args.is_empty() {
-                    return format!("Leer {}", args[0].replace("&", ""));
+                    return format!("Leer {}", args[0].replace('&', ""));
                 }
             }
             return "Leer".to_string();
@@ -268,7 +275,7 @@ pub(crate) fn clean_text(text: &str) -> String {
     for &op in &["+=", "-=", "*=", "/=", "%="] {
         if let Some(pos) = cleaned.find(op) {
             let var = cleaned[..pos].trim();
-            let expr = cleaned[pos + op.len()..].trim().replace(";", "");
+            let expr = cleaned[pos + op.len()..].trim().replace(';', "");
             let symbol = match op {
                 "+=" => "+",
                 "-=" => "-",
@@ -293,8 +300,8 @@ pub(crate) fn clean_text(text: &str) -> String {
         }
     }
 
-    if cleaned.contains("=") && !cleaned.contains("==") {
-        return cleaned.replace(" = ", " ← ").replace("=", " ← ");
+    if cleaned.contains('=') && !cleaned.contains("==") {
+        return cleaned.replace(" = ", " ← ").replace('=', " ← ");
     }
 
     if (cleaned.starts_with("strcpy(") || cleaned.starts_with("strncpy("))
@@ -311,7 +318,7 @@ pub(crate) fn clean_text(text: &str) -> String {
     if cleaned.contains("++") || cleaned.contains("--") {
         let is_inc = cleaned.contains("++");
         let op = if is_inc { "++" } else { "--" };
-        let mut var = cleaned.replace(op, "").replace(";", "").trim().to_string();
+        let mut var = cleaned.replace(op, "").replace(';', "").trim().to_string();
 
         if var.starts_with('(') && var.ends_with(')') {
             var = var[1..var.len() - 1].trim().to_string();
@@ -338,7 +345,7 @@ pub(crate) fn is_io(node: Node, code: &str) -> bool {
 pub(crate) fn is_preparation(node: Node, code: &str) -> bool {
     if node.kind() == "declaration" {
         let text = &code[node.start_byte()..node.end_byte()];
-        !text.contains("=") && !text.contains("++") && !text.contains("--")
+        !text.contains('=') && !text.contains("++") && !text.contains("--")
     } else {
         false
     }
@@ -352,7 +359,7 @@ pub(crate) fn is_process(node: Node, code: &str) -> bool {
         }
         "declaration" => {
             let text = &code[node.start_byte()..node.end_byte()];
-            text.contains("=") || text.contains("++") || text.contains("--")
+            text.contains('=') || text.contains("++") || text.contains("--")
         }
         "update_expression" => true,
         _ => false,

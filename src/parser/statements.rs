@@ -55,7 +55,7 @@ pub(crate) fn parse_translation_unit(
         let mut grouped = false;
         for (node_type, check_fn, condition) in rules {
             if condition
-                && check_fn(child, &parser.code)
+                && check_fn(child, parser.code)
                 && let Some(next_idx) = try_parse_group(
                     parser,
                     &children,
@@ -111,7 +111,7 @@ where
             j += 1;
             continue;
         }
-        if check_fn(c, &parser.code) {
+        if check_fn(c, parser.code) {
             let text = crate::parser::utils::clean_text(&parser.code[c.start_byte()..c.end_byte()]);
             if !text.is_empty() {
                 group_text.push(text);

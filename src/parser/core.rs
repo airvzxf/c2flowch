@@ -9,9 +9,10 @@ pub struct C2Flowch<'a> {
     pub(crate) flowchart: Flowchart,
     pub(crate) node_count: usize,
     pub(crate) loop_exits: Vec<String>,
-    pub(crate) code: String,
+    pub(crate) code: &'a str,
     pub(crate) level: u8,
     pub(crate) known_functions: HashMap<String, Node<'a>>,
+    pub(crate) sorted_func_names: Vec<String>,
     pub(crate) queue: VecDeque<String>,
     pub(crate) processed_functions: HashSet<String>,
     pub(crate) subroutines: Vec<Flowchart>,
@@ -22,9 +23,12 @@ impl<'a> C2Flowch<'a> {
     pub fn new(
         title: String,
         level: u8,
-        code: String,
+        code: &'a str,
         known_functions: HashMap<String, Node<'a>>,
     ) -> Self {
+        let mut sorted_func_names: Vec<String> = known_functions.keys().cloned().collect();
+        sorted_func_names.sort_by_key(|b| std::cmp::Reverse(b.len()));
+
         Self {
             flowchart: Flowchart {
                 title,
@@ -37,6 +41,7 @@ impl<'a> C2Flowch<'a> {
             code,
             level,
             known_functions,
+            sorted_func_names,
             queue: VecDeque::new(),
             processed_functions: HashSet::new(),
             subroutines: Vec::new(),
@@ -50,12 +55,10 @@ impl<'a> C2Flowch<'a> {
     }
 
     pub fn check_and_enqueue_subroutines(&mut self, text: &str) {
-        let mut keys: Vec<String> = self.known_functions.keys().cloned().collect();
-        keys.sort_by_key(|b| std::cmp::Reverse(b.len())); // Check longest first
-        for k in keys {
+        for k in &self.sorted_func_names {
             if text.contains(&format!("{}(", k))
-                && !self.processed_functions.contains(&k)
-                && !self.queue.contains(&k)
+                && !self.processed_functions.contains(k)
+                && !self.queue.contains(k)
             {
                 self.queue.push_back(k.clone());
             }
@@ -75,8 +78,8 @@ impl<'a> C2Flowch<'a> {
                 while current.kind() != "function_declarator" {
                     if let Some(n) = current.child_by_field_name("declarator") {
                         current = n;
-                    } else if current.child_count() > 0 {
-                        current = current.child(0).unwrap();
+                    } else if let Some(first_child) = current.child(0) {
+                        current = first_child;
                     } else {
                         break;
                     }
@@ -97,8 +100,8 @@ impl<'a> C2Flowch<'a> {
                                 } else if let Some(n) = name_node.child_by_field_name("declarator")
                                 {
                                     name_node = n;
-                                } else if name_node.child_count() > 0 {
-                                    name_node = name_node.child(0).unwrap();
+                                } else if let Some(first_child) = name_node.child(0) {
+                                    name_node = first_child;
                                 } else {
                                     break;
                                 }
@@ -268,8 +271,8 @@ pub fn parse_file(path: &Path, level: u8) -> Result<Flowchart> {
             while name_node.kind() != "identifier" {
                 if let Some(n) = name_node.child_by_field_name("declarator") {
                     name_node = n;
-                } else if name_node.child_count() > 0 {
-                    name_node = name_node.child(0).unwrap();
+                } else if let Some(first_child) = name_node.child(0) {
+                    name_node = first_child;
                 } else {
                     break;
                 }
@@ -287,7 +290,7 @@ pub fn parse_file(path: &Path, level: u8) -> Result<Flowchart> {
         .to_string_lossy()
         .into_owned();
 
-    let mut converter = C2Flowch::new(file_name.clone(), level, code.clone(), known_functions);
+    let mut converter = C2Flowch::new(file_name.clone(), level, &code, known_functions);
 
     // 2. Parse main (if exists) or the first function
     let start_node = if let Some(&n) = converter.known_functions.get("main") {
