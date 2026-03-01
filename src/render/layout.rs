@@ -694,6 +694,10 @@ pub(crate) fn traverse_assign_lanes(
             } else {
                 max_lane + 1
             }
+        } else if node.node_type == NodeType::SwitchCase
+            && edge.label.as_deref() == Some(EDGE_LABEL_TRUE)
+        {
+            lane + 1
         } else if edge.label.as_deref() == Some(EDGE_LABEL_TRUE) {
             max_lane + 1
         } else {
