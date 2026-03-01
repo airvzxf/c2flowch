@@ -747,30 +747,18 @@ pub(crate) fn calculate_node_size(node: &crate::ir::FlowNode, padding: usize) ->
         NodeType::PredefinedProcess => {
             let h = content_h + 2;
             let w = content_w + padding * 2 + 6;
-            let mut final_w = w;
-            if final_w % 2 != 0 {
-                final_w += 1;
-            }
-            (final_w, h)
+            (w, h)
         }
         NodeType::InputOutput => {
             let h = content_h + 2;
             let offset = h.saturating_sub(1);
             let w = content_w + offset + padding * 2 + 2;
-            let mut final_w = w;
-            if final_w % 2 != 0 {
-                final_w += 1;
-            }
-            (final_w, h)
+            (w, h)
         }
         _ => {
             let h = content_h + 2;
             let w = content_w + padding * 2 + 2;
-            let mut final_w = w;
-            if final_w % 2 != 0 {
-                final_w += 1;
-            }
-            (final_w, h)
+            (w, h)
         }
     }
 }
