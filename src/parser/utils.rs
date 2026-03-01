@@ -195,7 +195,7 @@ pub(crate) fn remove_pointer_syntax(text: &str) -> String {
 }
 
 pub(crate) fn clean_text(text: &str) -> String {
-    let mut cleaned = remove_pointer_syntax(text.trim());
+    let mut cleaned = remove_pointer_syntax(text.trim()).replace("\\n", "");
 
     let keywords = [
         "short unsigned ",
@@ -444,6 +444,7 @@ mod tests {
 
     #[test]
     fn test_clean_text_io() {
+        assert_eq!(clean_text("puts(\"Hello\\n\");"), "Imprimir \"Hello\"");
         assert_eq!(clean_text("puts(\"Hello\");"), "Imprimir \"Hello\"");
         assert_eq!(
             clean_text("fputs(\"World\", stdout);"),
