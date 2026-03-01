@@ -133,7 +133,7 @@ impl<'a> LayoutEngine<'a> {
                     .nodes
                     .iter()
                     .find(|n| n.id == *id)
-                    .is_some_and(|n| n.text.contains("Exit"));
+                    .is_some_and(|n| n.text == "MergeExit");
 
                 let ready_parents: Vec<_> = parents
                     .iter()
@@ -167,7 +167,11 @@ impl<'a> LayoutEngine<'a> {
                     .count();
 
                 if total_forward_parents > 0 && ready_forward_count == total_forward_parents {
-                    let dim = self.node_dims.get(id).context("Missing node_dim")?.clone();
+                    let dim = self
+                        .node_dims
+                        .get(id)
+                        .with_context(|| format!("Missing node_dim for {}", id))?
+                        .clone();
                     let mut max_y = *self.lane_y.get(&dim.lane).unwrap_or(&0);
                     let current_node = self.nodes_map.get(id).context("Missing node_map")?;
 
@@ -297,7 +301,7 @@ impl<'a> LayoutEngine<'a> {
                     false
                 });
 
-            let is_back_edge = n1_id_num > n2_id_num && !n2.text.contains("Exit");
+            let is_back_edge = n1_id_num > n2_id_num && n2.text != "MergeExit";
 
             if is_back_edge {
                 self.draw_back_edge(
@@ -681,7 +685,7 @@ pub(crate) fn traverse_assign_lanes(
             .nodes_map
             .get(&edge.to)
             .context("Missing context edge node")?;
-        let is_exit = target_node.text.contains("Exit");
+        let is_exit = target_node.text == "MergeExit";
 
         if is_exit && edge.label.as_deref() != Some(EDGE_LABEL_FALSE) {
             continue;
