@@ -1,50 +1,37 @@
 use tree_sitter::Node;
 
+const IO_FUNCTIONS: &[&str] = &[
+    "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
+];
+
 pub(crate) fn split_args(s: &str) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
     let mut paren_count = 0;
     let mut in_quote = false;
-    let mut chars = s.chars().peekable();
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
 
-    while let Some(c) = chars.next() {
-        if in_quote {
-            if c == '\\' {
-                current.push(c);
-                if let Some(next_c) = chars.next() {
-                    current.push(next_c);
-                }
-            } else if c == '"' {
-                in_quote = false;
-                current.push(c);
-            } else {
-                current.push(c);
-            }
-        } else {
-            match c {
-                '"' => {
-                    in_quote = true;
-                    current.push(c);
-                }
-                '(' => {
-                    paren_count += 1;
-                    current.push(c);
-                }
-                ')' => {
-                    paren_count -= 1;
-                    current.push(c);
-                }
-                ',' => {
-                    if paren_count == 0 {
-                        args.push(current.trim().to_string());
-                        current.clear();
-                    } else {
-                        current.push(c);
-                    }
-                }
-                _ => current.push(c),
+    while i < chars.len() {
+        let c = chars[i];
+        if c == '"' && (i == 0 || chars[i - 1] != '\\') {
+            in_quote = !in_quote;
+        }
+
+        if !in_quote {
+            if c == '(' {
+                paren_count += 1;
+            } else if c == ')' {
+                paren_count -= 1;
+            } else if c == ',' && paren_count == 0 {
+                args.push(current.trim().to_string());
+                current = String::new();
+                i += 1;
+                continue;
             }
         }
+        current.push(c);
+        i += 1;
     }
     if !current.trim().is_empty() {
         args.push(current.trim().to_string());
@@ -55,67 +42,44 @@ pub(crate) fn split_args(s: &str) -> Vec<String> {
 pub(crate) fn process_printf(inner: &str) -> String {
     let args = split_args(inner);
     if args.is_empty() {
-        return format!("Imprimir {}", inner);
+        return "Imprimir".to_string();
     }
 
-    let fmt_str = &args[0];
-    if !fmt_str.starts_with('"') || !fmt_str.ends_with('"') {
-        return format!("Imprimir {}", inner);
-    }
-
-    let fmt_content = &fmt_str[1..fmt_str.len() - 1];
-    let vars = &args[1..];
-
+    let fmt = &args[0];
     let mut parts = Vec::new();
-    let mut last_pos = 0;
-    let mut var_idx = 0;
-    let mut chars = fmt_content.char_indices().peekable();
 
-    while let Some((i, c)) = chars.next() {
-        if c == '%' {
-            if let Some(&(_, next_c)) = chars.peek()
-                && next_c == '%'
-            {
-                chars.next();
-                continue;
-            }
+    if fmt.starts_with('"') && fmt.ends_with('"') {
+        let fmt_str = &fmt[1..fmt.len() - 1];
+        let mut last_pos = 0;
+        let mut arg_idx = 1;
 
-            // Found specifier
+        for (i, _) in fmt_str.match_indices('%') {
             if i > last_pos {
-                let s = &fmt_content[last_pos..i];
-                let s_clean = s.replace("\\n", "").replace("%%", "%");
-                if !s_clean.is_empty() {
-                    parts.push(format!("\"{}\"", s_clean));
-                }
+                parts.push(format!("\"{}\"", &fmt_str[last_pos..i]));
+            }
+            if arg_idx < args.len() {
+                parts.push(args[arg_idx].clone());
+                arg_idx += 1;
             }
 
-            let mut spec_end = i + 1;
-            while let Some((j, sc)) = chars.peek() {
-                spec_end = *j + 1;
-                if "diuoxXfFeEgGaAcspn".contains(*sc) {
-                    chars.next();
+            // Skip the format specifier (e.g., %d, %s, %02d)
+            let mut skip = 1;
+            let sub = &fmt_str[i + 1..];
+            for c in sub.chars() {
+                if c.is_alphabetic() {
                     break;
                 }
-                if !"-+ #0123456789.*hljztL".contains(*sc) {
-                    break;
-                }
-                chars.next();
+                skip += 1;
             }
-
-            if var_idx < vars.len() {
-                parts.push(vars[var_idx].clone());
-                var_idx += 1;
-            }
-
-            last_pos = spec_end;
+            last_pos = i + 1 + skip;
         }
-    }
 
-    if last_pos < fmt_content.len() {
-        let s = &fmt_content[last_pos..];
-        let s_clean = s.replace("\\n", "").replace("%%", "%");
-        if !s_clean.is_empty() {
-            parts.push(format!("\"{}\"", s_clean));
+        if last_pos < fmt_str.len() {
+            parts.push(format!("\"{}\"", &fmt_str[last_pos..]));
+        }
+    } else {
+        for arg in args {
+            parts.push(arg);
         }
     }
 
@@ -140,6 +104,12 @@ pub(crate) fn remove_pointer_syntax(text: &str) -> String {
         }
 
         if !in_quote {
+            if c == '-' && i + 1 < chars.len() && chars[i + 1] == '>' {
+                result.push('.');
+                i += 2;
+                continue;
+            }
+
             if c == '&' && i + 1 < chars.len() && chars[i + 1] == '&' {
                 result.push('&');
                 result.push('&');
@@ -224,10 +194,6 @@ pub(crate) fn remove_pointer_syntax(text: &str) -> String {
     result
 }
 
-const IO_FUNCTIONS: &[&str] = &[
-    "printf(", "scanf(", "puts(", "gets(", "fputs(", "fgets(", "putchar(", "getchar(",
-];
-
 pub(crate) fn clean_text(text: &str) -> String {
     let mut cleaned = remove_pointer_syntax(text.trim());
 
@@ -263,10 +229,7 @@ pub(crate) fn clean_text(text: &str) -> String {
 
     cleaned = cleaned.replace(";", "").trim().to_string();
 
-    let io_output = ["printf(", "puts(", "fputs(", "putchar("];
-    let io_input = ["scanf(", "gets(", "fgets(", "getchar("];
-
-    for &call in &io_output {
+    for &call in &["printf(", "puts(", "fputs(", "putchar("] {
         if let Some(start) = cleaned.find(call) {
             if cleaned.len() > start + call.len() {
                 let inner = &cleaned[start + call.len()..cleaned.len() - 1];
@@ -282,7 +245,7 @@ pub(crate) fn clean_text(text: &str) -> String {
         }
     }
 
-    for &call in &io_input {
+    for &call in &["scanf(", "gets(", "fgets(", "getchar("] {
         if let Some(start) = cleaned.find(call) {
             if cleaned.len() > start + call.len() {
                 let inner = &cleaned[start + call.len()..cleaned.len() - 1];
@@ -315,7 +278,6 @@ pub(crate) fn clean_text(text: &str) -> String {
                 _ => unreachable!(),
             };
 
-            // Only use parentheses if expr contains spaces or operators (excluding simple identifiers or numbers)
             let is_complex = expr.contains(' ')
                 || expr.contains('+')
                 || expr.contains('-')
@@ -420,46 +382,37 @@ pub(crate) fn simplify_strcmp(mut text: String) -> String {
             let inner = &text[start + 7..end_idx];
             let args = split_args(inner);
             if args.len() == 2 {
-                let call_str = text[start..=end_idx].to_string();
+                let rest = text[end_idx + 1..].to_string();
+                let mut op = "";
+                let mut val = "";
 
-                let mut replaced = false;
-                let patterns = [
+                let operators = [
                     (" == 0", " = "),
-                    (" ==0", " = "),
-                    ("= 0", " = "),
-                    ("=0", " = "),
-                    (" != 0", " != "),
-                    (" !=0", " != "),
+                    (" != 0", " ≠ "),
                     (" > 0", " > "),
-                    (" >0", " > "),
                     (" < 0", " < "),
-                    (" <0", " < "),
-                    (" >= 0", " >= "),
-                    (" >=0", " >= "),
-                    (" <= 0", " <= "),
-                    (" <=0", " <= "),
+                    (" >= 0", " ≥ "),
+                    (" <= 0", " ≤ "),
                 ];
 
-                for (suffix, new_op) in patterns {
-                    let full_pattern = format!("{}{}", call_str, suffix);
-                    if text.contains(&full_pattern) {
-                        text = text
-                            .replace(&full_pattern, &format!("{}{}{}", args[0], new_op, args[1]));
-                        replaced = true;
+                for (o, replacement) in operators {
+                    if let Some(stripped) = rest.strip_prefix(o) {
+                        op = replacement;
+                        val = stripped;
                         break;
                     }
                 }
 
-                if replaced {
+                if !op.is_empty() {
+                    text = format!("{}{} {}{}", args[0], op, args[1], val);
+                    continue;
+                } else {
+                    text = format!("{} = {}{}", args[0], args[1], rest);
                     continue;
                 }
-
-                // fallback if no pattern matched
-                text = text.replace(&call_str, &format!("{} = {}", args[0], args[1]));
-                continue;
             }
         }
-        break; // Stop if we can't parse it
+        break;
     }
     text
 }
@@ -499,5 +452,12 @@ mod tests {
         assert_eq!(clean_text("putchar('A');"), "Imprimir 'A'");
         assert_eq!(clean_text("gets(buf);"), "Leer buf");
         assert_eq!(clean_text("fgets(buf, 10, stdin);"), "Leer buf");
+    }
+
+    #[test]
+    fn test_unify_member_access() {
+        assert_eq!(clean_text("linea->curp"), "linea.curp");
+        assert_eq!(clean_text("linea.curp"), "linea.curp");
+        assert_eq!(clean_condition("linea->id > 0"), "linea.id > 0");
     }
 }
