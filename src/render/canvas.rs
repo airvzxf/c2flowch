@@ -150,11 +150,33 @@ impl AsciiRenderer {
 
     pub fn render(&mut self) -> String {
         self.fix_junctions();
-        self.canvas
+        let lines: Vec<String> = self
+            .canvas
             .iter()
             .map(|row| row.iter().collect::<String>())
             .map(|s| s.trim_end().to_string())
             .filter(|s| !s.is_empty())
+            .collect();
+
+        if lines.is_empty() {
+            return String::new();
+        }
+
+        let min_leading_spaces = lines
+            .iter()
+            .map(|line| line.chars().take_while(|&c| c == ' ').count())
+            .min()
+            .unwrap_or(0);
+
+        lines
+            .into_iter()
+            .map(|line| {
+                if line.len() >= min_leading_spaces {
+                    format!("  {}", &line[min_leading_spaces..])
+                } else {
+                    line
+                }
+            })
             .collect::<Vec<String>>()
             .join("\n")
     }
