@@ -603,12 +603,26 @@ pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
 
 fn render_flowchart_single(flowchart: &Flowchart) -> Result<String> {
     let padding = 3;
-    let mut renderer = AsciiRenderer::new(2000, 5000, padding);
 
     let mut engine = LayoutEngine::new(flowchart, padding);
     engine.assign_lanes()?;
     engine.calculate_x_offsets();
     engine.place_nodes()?;
+
+    let mut max_x = 0;
+    let mut max_y = 0;
+    for (id, (x, y)) in &engine.node_pos {
+        if let Some(dim) = engine.node_dims.get(id) {
+            max_x = max_x.max(x + dim.w);
+            max_y = max_y.max(y + dim.h);
+        }
+    }
+    // Add extra space for edges and routing
+    max_x += 150;
+    max_y += 100;
+
+    let mut renderer = AsciiRenderer::new(max_x, max_y, padding);
+
     engine.draw_nodes(&mut renderer)?;
     engine.draw_edges(&mut renderer)?;
 
