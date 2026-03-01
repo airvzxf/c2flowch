@@ -32,6 +32,9 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
     - [x] Symmetric 3-space padding for all nodes.
     - [x] Full UTF-8 support for Spanish characters (ñ, á, etc.).
     - [x] Safe string truncation to prevent panics.
+    - [x] **Performance:** Optimized graph traversal using adjacency lists (parents/children maps).
+    - [x] **Efficiency:** Targeted junction fixing using coordinate tracking (HashSet) instead of full canvas sweeps.
+    - [x] **Bug Fix:** Resolved junction character issues (e.g., missing `┬`) at node/line boundaries.
 
 ---
 
@@ -46,7 +49,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 ### Phase 4: Polish (In Progress)
 - [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [ ] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
-- [ ] **i18n:** Formal support for multiple languages (Spanish priority).
+- [ ] **i18n:** Formal support for multiple languages (English priority).
 - [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
 
