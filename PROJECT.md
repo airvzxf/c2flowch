@@ -27,6 +27,8 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **Parser:** tree-sitter-c
 - **Core Pipeline:** Functional C -> YAML -> ASCII pipeline.
 - **Recent Achievements:**
+    - [x] Subroutine/Function call rendering (`PredefinedProcess`).
+    - [x] Automatic sub-diagram generation for local functions using BFS discovery.
     - [x] Symmetric 3-space padding for all nodes.
     - [x] Full UTF-8 support for Spanish characters (ñ, á, etc.).
     - [x] Safe string truncation to prevent panics.
@@ -42,12 +44,15 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [x] Lane-based ASCII Renderer.
 
 ### Phase 4: Polish (In Progress)
+- [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [ ] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
 - [ ] **i18n:** Formal support for multiple languages (Spanish priority).
 - [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
 
 ### Phase 5: Expansion
-- [ ] **SVG Export:** Native SVG writer or Graphviz backend.
+- [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
+- [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
+- [ ] **SVG Export:** Native SVG writer or Graphviz backend (needs adaptation for multi-function flowcharts).
 - [ ] **Loop Rendering:** Improve visualization of back-edges in `do-while/for`.
 - [ ] **Documentation:** Finalize README and help messages.

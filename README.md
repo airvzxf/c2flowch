@@ -5,6 +5,7 @@ Convert C source code into clean, readable ASCII flowcharts with an intermediate
 ## Status: Alpha
 Currently supports:
 - Basic C syntax (declarations, assignments, if/else, do/while, for).
+- Subroutines and function calls (automatic sub-diagram generation).
 - Intermediate YAML representation for manual adjustment.
 - ASCII rendering with a lane-based layout.
 - Symmetric 3-space padding and full support for Spanish characters (UTF-8).
@@ -29,7 +30,7 @@ cargo test
 ```
 
 ## Features
-- **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Parenthesized (Terminator).
+- **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Parenthesized (Terminator), Double-lined Rectangles (Predefined Process/Subroutine).
 - **Correct Padding**: Every node has symmetric 3-space padding, accounting for visual width of multi-byte characters like `ñ` and `í`.
 - **Level of Detail**: Filter out variable declarations or focus only on function calls.
 - **Human-in-the-loop**: The YAML intermediate format allows users to refine the diagram before final rendering.
