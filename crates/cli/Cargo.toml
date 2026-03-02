@@ -1,0 +1,15 @@
+[package]
+name = "c2flowch"
+version.workspace = true
+edition.workspace = true
+default-run = "c2flowch"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+c2flowch-core.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+tempfile.workspace = true
+predicates.workspace = true

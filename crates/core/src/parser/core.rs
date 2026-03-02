@@ -1,8 +1,6 @@
 use crate::ir::{FlowNode, Flowchart, NodeType};
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::fs;
-use std::path::Path;
 use tree_sitter::{Node, Parser};
 
 pub struct C2Flowch<'a> {
@@ -259,15 +257,14 @@ impl<'a> C2Flowch<'a> {
     }
 }
 
-pub fn parse_file(path: &Path, level: u8) -> Result<Flowchart> {
-    let code = fs::read_to_string(path).context("Could not read C file")?;
+pub fn parse_source(code: &str, title: &str, level: u8) -> Result<Flowchart> {
     let mut parser = Parser::new();
     let language = tree_sitter_c::LANGUAGE.into();
     parser
         .set_language(&language)
         .context("Error setting language")?;
 
-    let tree = parser.parse(&code, None).context("Error parsing C code")?;
+    let tree = parser.parse(code, None).context("Error parsing C code")?;
     let root = tree.root_node();
 
     // 1. Find all functions
@@ -294,13 +291,7 @@ pub fn parse_file(path: &Path, level: u8) -> Result<Flowchart> {
         }
     }
 
-    let file_name = path
-        .file_name()
-        .context("Could not get file name")?
-        .to_string_lossy()
-        .into_owned();
-
-    let mut converter = C2Flowch::new(file_name.clone(), level, &code, known_functions);
+    let mut converter = C2Flowch::new(title.to_string(), level, code, known_functions);
 
     // 2. Parse main (if exists) or the first function
     let start_node = if let Some(&n) = converter.known_functions.get("main") {

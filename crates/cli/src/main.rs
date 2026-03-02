@@ -1,10 +1,6 @@
-mod ir;
-mod parser;
-mod render;
-
-use crate::ir::Flowchart;
-use crate::render::render_flowchart;
 use anyhow::Result;
+use c2flowch_core::ir::Flowchart;
+use c2flowch_core::render::render_flowchart;
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::PathBuf;
@@ -68,7 +64,9 @@ fn main() -> Result<()> {
             level,
         } => {
             println!("Parsing {} with detail level {level}...", input.display());
-            let flowchart = crate::parser::parse_file(&input, level)?;
+            let code = fs::read_to_string(&input)?;
+            let file_name = input.file_name().unwrap_or_default().to_string_lossy();
+            let flowchart = c2flowch_core::parser::parse_source(&code, &file_name, level)?;
             let yaml = flowchart.to_yaml()?;
 
             let output_path = output.unwrap_or_else(|| input.with_extension("yaml"));
