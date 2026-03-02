@@ -14,13 +14,13 @@ Currently supports:
 
 ### 1. Parse C to YAML IR
 ```bash
-./target/debug/c2flowch parse --level 5 main.c -o flow.yaml
+cargo run -- parse main.c -o flow.yaml --level 5
 ```
 - `--level 1-5`: Adjust detail level (5 is full line-by-line).
 
 ### 2. Render YAML to ASCII
 ```bash
-./target/debug/c2flowch render flow.yaml --output diagram.txt
+cargo run -- render flow.yaml --output diagram.txt
 ```
 
 ## Testing

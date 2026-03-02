@@ -14,11 +14,12 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **UX/UI:** Clean CLI flow: `parse` -> `edit` -> `render`.
 
 ### Technical Architecture
-1. **Parser (Rust + Tree-sitter):** CST generation.
-2. **Transformer:** CST -> IR (Intermediate Representation) with detail filtering.
-3. **IR (YAML):** Editable bridge between code and diagram.
-4. **Layout Engine:** Lane-based grid (Lane 120 as main flow).
-5. **Renderer:** ASCII/Unicode (initially) and SVG (planned).
+1. **Cargo Workspaces:** Separated into `c2flowch-core` (pure logic) and `c2flowch` (CLI/IO).
+2. **Parser (Rust + Tree-sitter):** CST generation inside `core`.
+3. **Transformer:** CST -> IR (Intermediate Representation) with detail filtering.
+4. **IR (YAML):** Editable bridge between code and diagram.
+5. **Layout Engine:** Lane-based grid (Lane 120 as main flow).
+6. **Renderer:** ASCII/Unicode (initially) and SVG (planned).
 
 ---
 
@@ -27,6 +28,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **Parser:** tree-sitter-c
 - **Core Pipeline:** Functional C -> YAML -> ASCII pipeline.
 - **Recent Achievements:**
+    - [x] **Architecture:** Refactored project into Cargo Workspaces (`core`, `cli`) to decouple IO from pure logic, paving the way for WebAssembly (Wasm) support.
     - [x] Subroutine/Function call rendering (`PredefinedProcess`).
     - [x] Automatic sub-diagram generation for local functions using BFS discovery.
     - [x] Symmetric 3-space padding for all nodes.
