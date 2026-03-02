@@ -597,7 +597,7 @@ pub(crate) fn parse_switch_statement(
             parser
                 .flowchart
                 .add_edge(&spine_last, &case_id, spine_label);
-            spine_last = case_id.clone();
+            spine_last.clone_from(&case_id);
 
             let case_entry_id = parser.next_id();
             parser.flowchart.add_node(FlowNode {
@@ -651,10 +651,9 @@ pub(crate) fn parse_break_statement(
     parser: &mut C2Flowch,
     _node: Node,
     last_node_id: Option<String>,
-    label: Option<String>,
-) -> Result<Option<String>> {
+    _label: Option<String>,
+) -> Option<String> {
     let mut current_last = last_node_id;
-    let _current_label = label;
 
     if let Some(prev) = current_last
         && let Some(exit_id) = parser.loop_exits.last()
@@ -665,7 +664,7 @@ pub(crate) fn parse_break_statement(
     }
     current_last = None;
 
-    Ok(current_last)
+    current_last
 }
 
 pub(crate) fn parse_return_statement(
@@ -673,7 +672,7 @@ pub(crate) fn parse_return_statement(
     node: Node,
     last_node_id: Option<String>,
     label: Option<String>,
-) -> Result<Option<String>> {
+) -> Option<String> {
     let mut current_last = last_node_id;
     let mut current_label = label;
 
@@ -709,5 +708,5 @@ pub(crate) fn parse_return_statement(
     }
     current_last = None;
 
-    Ok(current_last)
+    current_last
 }

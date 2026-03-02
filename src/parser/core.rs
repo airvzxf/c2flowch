@@ -219,12 +219,12 @@ impl<'a> C2Flowch<'a> {
                 );
             }
             "break_statement" => {
-                return crate::parser::statements::parse_break_statement(
+                return Ok(crate::parser::statements::parse_break_statement(
                     self,
                     node,
                     current_last,
                     current_label,
-                );
+                ));
             }
             "switch_statement" => {
                 return crate::parser::statements::parse_switch_statement(
@@ -235,12 +235,12 @@ impl<'a> C2Flowch<'a> {
                 );
             }
             "return_statement" => {
-                return crate::parser::statements::parse_return_statement(
+                return Ok(crate::parser::statements::parse_return_statement(
                     self,
                     node,
                     current_last,
                     current_label,
-                );
+                ));
             }
             _ => {
                 if node.child_count() > 0 {

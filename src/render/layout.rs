@@ -181,7 +181,7 @@ impl<'a> LayoutEngine<'a> {
                     let dim = self
                         .node_dims
                         .get(id)
-                        .with_context(|| format!("Missing node_dim for {}", id))?
+                        .with_context(|| format!("Missing node_dim for {id}"))?
                         .clone();
                     let mut max_y = *self.lane_y.get(&dim.lane).unwrap_or(&0);
                     let current_node = self.nodes_map.get(id).context("Missing node_map")?;
@@ -340,7 +340,7 @@ impl<'a> LayoutEngine<'a> {
             } else if label == Some(EDGE_LABEL_BREAK) {
                 self.draw_break_edge(renderer, edge, (x1, y1, dim1), (x2, y2, dim2))?;
             } else if is_loop_head {
-                self.draw_loop_head_edge(
+                Self::draw_loop_head_edge(
                     renderer,
                     label,
                     (x1, y1, dim1),
@@ -348,7 +348,7 @@ impl<'a> LayoutEngine<'a> {
                     is_target_merge,
                 );
             } else if is_decision {
-                self.draw_decision_edge(
+                Self::draw_decision_edge(
                     renderer,
                     n1,
                     label,
@@ -492,7 +492,7 @@ impl<'a> LayoutEngine<'a> {
             };
             let tx = x2 + dim2.w / 2;
             let ty = y2;
-            let margin_x = 10u64.saturating_sub(depth_inside as u64 * 4) as usize;
+            let margin_x = 10usize.saturating_sub(depth_inside * 4);
             renderer.draw_loop_back(
                 sx,
                 sy,
@@ -576,7 +576,6 @@ impl<'a> LayoutEngine<'a> {
     }
 
     fn draw_loop_head_edge(
-        &self,
         renderer: &mut AsciiRenderer,
         label: Option<&str>,
         (x1, y1, dim1): (usize, usize, &NodeDim),
@@ -609,7 +608,6 @@ impl<'a> LayoutEngine<'a> {
     }
 
     fn draw_decision_edge(
-        &self,
         renderer: &mut AsciiRenderer,
         n1: &crate::ir::FlowNode,
         mut label: Option<&str>,
