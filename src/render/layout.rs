@@ -186,26 +186,36 @@ impl<'a> LayoutEngine<'a> {
                     let mut max_y = *self.lane_y.get(&dim.lane).unwrap_or(&0);
                     let current_node = self.nodes_map.get(id).context("Missing node_map")?;
 
-                    for p in ready_parents {
-                        let parent_node = self
-                            .nodes_map
-                            .get(&p.from)
-                            .context("Missing node_map for parent")?;
+                    for (p_id_str, (_, py)) in &self.processed_nodes {
+                        let p_id_num: usize = parse_id(p_id_str);
+                        let is_parent = ready_parents.iter().any(|p| p.from == *p_id_str);
+
+                        let parent_node = self.nodes_map.get(p_id_str).unwrap();
                         let node_is_merge = current_node.text == "Merge";
                         let parent_is_merge = parent_node.text == "Merge";
 
-                        let gap = if node_is_merge {
-                            2
-                        } else if parent_is_merge {
-                            3
-                        } else {
-                            5
-                        };
-
-                        if let Some((_, py)) = self.processed_nodes.get(&p.from)
-                            && *py + gap > max_y
-                        {
-                            max_y = *py + gap;
+                        if is_parent {
+                            let gap = if node_is_merge {
+                                2
+                            } else if parent_is_merge {
+                                3
+                            } else {
+                                5
+                            };
+                            if *py + gap > max_y {
+                                max_y = *py + gap;
+                            }
+                        } else if p_id_num < c_id_num {
+                            let gap = if node_is_merge {
+                                2
+                            } else if parent_is_merge {
+                                7
+                            } else {
+                                4
+                            };
+                            if *py + gap > max_y {
+                                max_y = *py + gap;
+                            }
                         }
                     }
 
@@ -347,7 +357,30 @@ impl<'a> LayoutEngine<'a> {
                     is_target_merge,
                 );
             } else if is_target_merge {
-                renderer.draw_merge_left(x1 + dim1.w / 2, y1 + dim1.h, x2 + dim2.w / 2, y2);
+                let mut collision = false;
+                let line_top = y1 + dim1.h;
+                let line_bottom = y2;
+
+                for (other_id, (_, py)) in &self.node_pos {
+                    if other_id != &edge.from
+                        && other_id != &edge.to
+                        && let Some(other_dim) = self.node_dims.get(other_id)
+                        && other_dim.lane == dim1.lane
+                    {
+                        let node_top = *py;
+                        let node_bottom = py + other_dim.h;
+                        if node_bottom > line_top && node_top < line_bottom {
+                            collision = true;
+                            break;
+                        }
+                    }
+                }
+
+                if collision {
+                    self.draw_break_edge(renderer, edge, (x1, y1, dim1), (x2, y2, dim2))?;
+                } else {
+                    renderer.draw_merge_left(x1 + dim1.w / 2, y1 + dim1.h, x2 + dim2.w / 2, y2);
+                }
             } else {
                 let sx = x1 + dim1.w / 2;
                 let sy = y1 + dim1.h;
@@ -753,14 +786,10 @@ pub(crate) fn traverse_assign_lanes(
             if edge.label.as_deref() == Some(EDGE_LABEL_FALSE) || edge.label.is_none() {
                 lane
             } else {
-                max_lane + 1
+                lane + 1
             }
-        } else if node.node_type == NodeType::SwitchCase
-            && edge.label.as_deref() == Some(EDGE_LABEL_TRUE)
-        {
-            lane + 1
         } else if edge.label.as_deref() == Some(EDGE_LABEL_TRUE) {
-            max_lane + 1
+            lane + 1
         } else {
             lane
         };
