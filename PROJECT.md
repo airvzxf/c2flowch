@@ -51,6 +51,11 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [x] Lane-based ASCII Renderer.
 
 ### Phase 4: Polish (In Progress)
+- [ ] **CLI UX Improvements:**
+    - Add version, author, and extended descriptions to `--help`.
+    - Document detail levels (1-5) clearly in the CLI help text.
+    - Implement human-friendly error messages using `anyhow` context (e.g., file not found).
+- [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
 - [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [x] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
 - [ ] **i18n:** Formal support for multiple languages (English priority).
