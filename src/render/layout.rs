@@ -328,7 +328,7 @@ impl<'a> LayoutEngine<'a> {
                     is_target_merge,
                 )?;
             } else if label == Some(EDGE_LABEL_BREAK) {
-                self.draw_break_edge(renderer, (x1, y1, dim1), (x2, y2, dim2))?;
+                self.draw_break_edge(renderer, edge, (x1, y1, dim1), (x2, y2, dim2))?;
             } else if is_loop_head {
                 self.draw_loop_head_edge(
                     renderer,
@@ -478,6 +478,7 @@ impl<'a> LayoutEngine<'a> {
     fn draw_break_edge(
         &self,
         renderer: &mut AsciiRenderer,
+        edge: &crate::ir::FlowEdge,
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
     ) -> Result<()> {
@@ -486,13 +487,30 @@ impl<'a> LayoutEngine<'a> {
         let tx = x2 + dim2.w / 2;
         let ty = y2;
 
+        let n1_id_num = parse_id(&edge.from);
+        let n2_id_num = parse_id(&edge.to);
+
+        let mut depth_inside = 0;
+        for other_edge in &self.flowchart.edges {
+            if other_edge.label.as_deref() == Some(crate::ir::EDGE_LABEL_BREAK) {
+                let m1_id_num = parse_id(&other_edge.from);
+                let m2_id_num = parse_id(&other_edge.to);
+                // If the other break edge is completely inside this one
+                if m1_id_num > n1_id_num && m2_id_num <= n2_id_num {
+                    depth_inside += 1;
+                }
+            }
+        }
+
         let max_l = *self.lanes_width.keys().max().unwrap_or(&0);
-        let collector_x = self.lane_x.get(&max_l).context("Missing max lane x")?
+        let base_collector_x = self.lane_x.get(&max_l).context("Missing max lane x")?
             + self
                 .lanes_width
                 .get(&max_l)
                 .context("Missing max lane width")?
             + 8;
+
+        let collector_x = base_collector_x + depth_inside * 4;
 
         let y_turn = sy + 2;
         renderer.draw_vertical_line(sx, sy, y_turn, false, None);

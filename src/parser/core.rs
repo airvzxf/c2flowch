@@ -27,7 +27,14 @@ impl<'a> C2Flowch<'a> {
         known_functions: HashMap<String, Node<'a>>,
     ) -> Self {
         let mut sorted_func_names: Vec<String> = known_functions.keys().cloned().collect();
-        sorted_func_names.sort_by_key(|b| std::cmp::Reverse(b.len()));
+        sorted_func_names.sort_by(|a, b| {
+            let len_cmp = b.len().cmp(&a.len());
+            if len_cmp == std::cmp::Ordering::Equal {
+                a.cmp(b)
+            } else {
+                len_cmp
+            }
+        });
 
         Self {
             flowchart: Flowchart {
