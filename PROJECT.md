@@ -39,6 +39,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
     - [x] **Bug Fix:** Resolved junction character issues (e.g., missing `┬`) at node/line boundaries.
     - [x] **Advanced Edge Routing:** Implemented dynamic cascading offsets for nested branch avoidance (switch/break logic).
     - [x] **Determinism:** Fixed non-deterministic subroutine ordering by stabilizing parser discovery (alphabetical fallback).
+    - [x] **i18n:** Implemented a static translation system and language metadata in the IR, supporting English and Spanish.
 
 ---
 
@@ -58,7 +59,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
 - [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [x] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
-- [ ] **i18n:** Formal support for multiple languages (English priority).
+- [x] **i18n:** Formal support for multiple languages (English and Spanish implemented).
 - [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
 

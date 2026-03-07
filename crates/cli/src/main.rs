@@ -1,4 +1,5 @@
 use anyhow::Result;
+use c2flowch_core::i18n::Language;
 use c2flowch_core::ir::Flowchart;
 use c2flowch_core::render::render_flowchart;
 use clap::{Parser, Subcommand};
@@ -40,6 +41,9 @@ enum Commands {
         /// Level of detail (1-5)
         #[arg(short, long, default_value_t = 3, value_parser = clap::value_parser!(u8).range(1..=5))]
         level: u8,
+        /// Language (en, es)
+        #[arg(long, default_value = "en")]
+        lang: String,
     },
     /// Render a flowchart from an intermediate YAML representation
     Render {
@@ -62,11 +66,17 @@ fn main() -> Result<()> {
             input,
             output,
             level,
+            lang,
         } => {
-            println!("Parsing {} with detail level {level}...", input.display());
+            let parsed_lang = lang.parse::<Language>().unwrap_or(Language::En);
+            println!(
+                "Parsing {} with detail level {level} in language {lang}...",
+                input.display()
+            );
             let code = fs::read_to_string(&input)?;
             let file_name = input.file_name().unwrap_or_default().to_string_lossy();
-            let flowchart = c2flowch_core::parser::parse_source(&code, &file_name, level)?;
+            let flowchart =
+                c2flowch_core::parser::parse_source(&code, &file_name, level, parsed_lang)?;
             let yaml = flowchart.to_yaml()?;
 
             let output_path = output.unwrap_or_else(|| input.with_extension("yaml"));

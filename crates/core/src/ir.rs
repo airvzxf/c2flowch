@@ -1,9 +1,8 @@
+use crate::i18n::Language;
 use serde::{Deserialize, Serialize};
 
 pub const EDGE_LABEL_BREAK: &str = "__Break__";
 pub const EDGE_LABEL_DEPENDENCY: &str = "Dependency";
-pub const EDGE_LABEL_TRUE: &str = "Verdadero";
-pub const EDGE_LABEL_FALSE: &str = "Falso";
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum NodeType {
@@ -44,6 +43,8 @@ pub struct FlowEdge {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Flowchart {
     pub title: String,
+    #[serde(default)]
+    pub lang: Language,
     pub nodes: Vec<FlowNode>,
     pub edges: Vec<FlowEdge>,
     #[serde(default)]

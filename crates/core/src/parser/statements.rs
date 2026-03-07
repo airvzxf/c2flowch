@@ -1,6 +1,5 @@
-use crate::ir::{
-    EDGE_LABEL_BREAK, EDGE_LABEL_DEPENDENCY, EDGE_LABEL_FALSE, EDGE_LABEL_TRUE, FlowNode, NodeType,
-};
+use crate::i18n::I18n;
+use crate::ir::{EDGE_LABEL_BREAK, EDGE_LABEL_DEPENDENCY, FlowNode, NodeType};
 use crate::parser::core::C2Flowch;
 use anyhow::{Context, Result};
 use tree_sitter::Node;
@@ -120,7 +119,10 @@ where
             continue;
         }
         if check_fn(c, parser.code) {
-            let text = crate::parser::utils::clean_text(&parser.code[c.start_byte()..c.end_byte()]);
+            let text = crate::parser::utils::clean_text(
+                &parser.code[c.start_byte()..c.end_byte()],
+                parser.lang,
+            );
             if !text.is_empty() {
                 group_text.push(text);
             }
@@ -191,7 +193,7 @@ pub(crate) fn parse_if_statement(
     let true_last = parser.traverse(
         consequence,
         Some(if_id.clone()),
-        Some(EDGE_LABEL_TRUE.to_string()),
+        Some(I18n::t_true(parser.lang).to_string()),
     )?;
 
     let mut false_last = None;
@@ -199,7 +201,7 @@ pub(crate) fn parse_if_statement(
         false_last = parser.traverse(
             alternative,
             Some(if_id.clone()),
-            Some(EDGE_LABEL_FALSE.to_string()),
+            Some(I18n::t_false(parser.lang).to_string()),
         )?;
     }
 
@@ -217,9 +219,11 @@ pub(crate) fn parse_if_statement(
     if let Some(f) = false_last {
         parser.flowchart.add_edge(&f, &join_id, None);
     } else {
-        parser
-            .flowchart
-            .add_edge(&if_id, &join_id, Some(EDGE_LABEL_FALSE.to_string()));
+        parser.flowchart.add_edge(
+            &if_id,
+            &join_id,
+            Some(I18n::t_false(parser.lang).to_string()),
+        );
     }
     current_last = Some(join_id);
 
@@ -285,7 +289,7 @@ pub(crate) fn parse_while_statement(
     let body_last = parser.traverse(
         body,
         Some(dec_id.clone()),
-        Some(EDGE_LABEL_TRUE.to_string()),
+        Some(I18n::t_true(parser.lang).to_string()),
     )?;
 
     parser.loop_exits.pop();
@@ -299,9 +303,11 @@ pub(crate) fn parse_while_statement(
             .add_edge(&bl, &join_exit_id, Some(EDGE_LABEL_DEPENDENCY.to_string()));
     }
 
-    parser
-        .flowchart
-        .add_edge(&dec_id, &join_exit_id, Some(EDGE_LABEL_FALSE.to_string()));
+    parser.flowchart.add_edge(
+        &dec_id,
+        &join_exit_id,
+        Some(I18n::t_false(parser.lang).to_string()),
+    );
 
     current_last = Some(join_exit_id);
 
@@ -371,12 +377,16 @@ pub(crate) fn parse_do_statement(
     }
 
     // Link loop back to entry
-    parser
-        .flowchart
-        .add_edge(&dec_id, &entry_id, Some(EDGE_LABEL_TRUE.to_string()));
-    parser
-        .flowchart
-        .add_edge(&dec_id, &exit_id, Some(EDGE_LABEL_FALSE.to_string()));
+    parser.flowchart.add_edge(
+        &dec_id,
+        &entry_id,
+        Some(I18n::t_true(parser.lang).to_string()),
+    );
+    parser.flowchart.add_edge(
+        &dec_id,
+        &exit_id,
+        Some(I18n::t_false(parser.lang).to_string()),
+    );
 
     current_last = Some(exit_id);
 
@@ -402,7 +412,7 @@ pub(crate) fn parse_for_statement(
     // 1. Initializer
     if let Some(i) = init {
         let i_text = parser.code[i.start_byte()..i.end_byte()].to_string();
-        let clean_i = crate::parser::utils::clean_text(&i_text);
+        let clean_i = crate::parser::utils::clean_text(&i_text, parser.lang);
         let init_id = parser.next_id();
         parser.flowchart.add_node(FlowNode {
             id: init_id.clone(),
@@ -466,7 +476,7 @@ pub(crate) fn parse_for_statement(
     let body_last = parser.traverse(
         body,
         Some(dec_id.clone()),
-        Some(EDGE_LABEL_TRUE.to_string()),
+        Some(I18n::t_true(parser.lang).to_string()),
     )?;
 
     parser.loop_exits.pop();
@@ -476,7 +486,7 @@ pub(crate) fn parse_for_statement(
     if let Some(u) = update {
         // Force update to be its own node if it's an expression
         let u_text = parser.code[u.start_byte()..u.end_byte()].to_string();
-        let clean_u = crate::parser::utils::clean_text(&u_text);
+        let clean_u = crate::parser::utils::clean_text(&u_text, parser.lang);
         let u_id = parser.next_id();
         parser.flowchart.add_node(FlowNode {
             id: u_id.clone(),
@@ -499,9 +509,11 @@ pub(crate) fn parse_for_statement(
             .add_edge(&lbl, &join_exit_id, Some(EDGE_LABEL_DEPENDENCY.to_string()));
     }
 
-    parser
-        .flowchart
-        .add_edge(&dec_id, &join_exit_id, Some(EDGE_LABEL_FALSE.to_string()));
+    parser.flowchart.add_edge(
+        &dec_id,
+        &join_exit_id,
+        Some(I18n::t_false(parser.lang).to_string()),
+    );
 
     current_last = Some(join_exit_id);
 
@@ -564,7 +576,7 @@ pub(crate) fn parse_switch_statement(
                 child.kind() == "default_statement" || child.child_by_field_name("value").is_none();
 
             let case_text = if is_default {
-                "default".to_string()
+                I18n::t_default(parser.lang).to_string()
             } else {
                 let val_node = child
                     .child_by_field_name("value")
@@ -592,7 +604,7 @@ pub(crate) fn parse_switch_statement(
             let spine_label = if spine_last == switch_id {
                 None
             } else {
-                Some(EDGE_LABEL_FALSE.to_string())
+                Some(I18n::t_false(parser.lang).to_string())
             };
             parser
                 .flowchart
@@ -607,9 +619,11 @@ pub(crate) fn parse_switch_statement(
                 source_line: None,
             });
 
-            parser
-                .flowchart
-                .add_edge(&case_id, &case_entry_id, Some(EDGE_LABEL_TRUE.to_string()));
+            parser.flowchart.add_edge(
+                &case_id,
+                &case_entry_id,
+                Some(I18n::t_true(parser.lang).to_string()),
+            );
             if let Some(ft) = fallthrough_id {
                 parser.flowchart.add_edge(&ft, &case_entry_id, None);
             }
@@ -637,9 +651,11 @@ pub(crate) fn parse_switch_statement(
             .add_edge(prev_node, &exit_id, Some(EDGE_LABEL_DEPENDENCY.to_string()));
     }
 
-    parser
-        .flowchart
-        .add_edge(&spine_last, &exit_id, Some(EDGE_LABEL_FALSE.to_string()));
+    parser.flowchart.add_edge(
+        &spine_last,
+        &exit_id,
+        Some(I18n::t_false(parser.lang).to_string()),
+    );
 
     parser.loop_exits.pop();
     current_last = Some(exit_id);
@@ -680,7 +696,7 @@ pub(crate) fn parse_return_statement(
 
     let raw_text = parser.code[node.start_byte()..node.end_byte()].to_string();
     let text = if parser.is_main {
-        "Fin".to_string()
+        I18n::t_end(parser.lang).to_string()
     } else {
         let clean = raw_text
             .replace("return", "")
@@ -689,9 +705,9 @@ pub(crate) fn parse_return_statement(
             .to_string();
         let clean = crate::parser::utils::remove_pointer_syntax(&clean);
         if clean.trim().is_empty() {
-            "Retornar".to_string()
+            I18n::t_return(parser.lang).to_string()
         } else {
-            format!("Retornar: {}", clean.trim())
+            format!("{}: {}", I18n::t_return(parser.lang), clean.trim())
         }
     };
 

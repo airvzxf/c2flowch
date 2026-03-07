@@ -1,3 +1,4 @@
+use crate::i18n::{I18n, Language};
 use crate::ir::{FlowNode, Flowchart, NodeType};
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -9,6 +10,7 @@ pub struct C2Flowch<'a> {
     pub(crate) loop_exits: Vec<String>,
     pub(crate) code: &'a str,
     pub(crate) level: u8,
+    pub(crate) lang: Language,
     pub(crate) known_functions: HashMap<String, Node<'a>>,
     pub(crate) sorted_func_names: Vec<String>,
     pub(crate) queue: VecDeque<String>,
@@ -22,6 +24,7 @@ impl<'a> C2Flowch<'a> {
         title: String,
         level: u8,
         code: &'a str,
+        lang: Language,
         known_functions: HashMap<String, Node<'a>>,
     ) -> Self {
         let mut sorted_func_names: Vec<String> = known_functions.keys().cloned().collect();
@@ -37,6 +40,7 @@ impl<'a> C2Flowch<'a> {
         Self {
             flowchart: Flowchart {
                 title,
+                lang,
                 nodes: Vec::new(),
                 edges: Vec::new(),
                 subroutines: Vec::new(),
@@ -45,6 +49,7 @@ impl<'a> C2Flowch<'a> {
             loop_exits: Vec::new(),
             code,
             level,
+            lang,
             known_functions,
             sorted_func_names,
             queue: VecDeque::new(),
@@ -122,13 +127,13 @@ impl<'a> C2Flowch<'a> {
         let start_id = self.next_id();
 
         let start_text = if is_main {
-            "Inicio".to_string()
+            I18n::t_start(self.lang).to_string()
         } else {
             let params_text = self.extract_parameters(node);
             if params_text.is_empty() || params_text == "()" {
-                format!("Inicio: {name}()")
+                format!("{}: {name}()", I18n::t_start(self.lang))
             } else {
-                format!("Inicio: {name}{params_text}")
+                format!("{}: {name}{params_text}", I18n::t_start(self.lang))
             }
         };
 
@@ -149,9 +154,9 @@ impl<'a> C2Flowch<'a> {
                     id: end_id.clone(),
                     node_type: NodeType::Terminator,
                     text: if is_main {
-                        "Fin".to_string()
+                        I18n::t_end(self.lang).to_string()
                     } else {
-                        "Retornar".to_string()
+                        I18n::t_return(self.lang).to_string()
                     },
                     source_line: None,
                 });
@@ -257,7 +262,7 @@ impl<'a> C2Flowch<'a> {
     }
 }
 
-pub fn parse_source(code: &str, title: &str, level: u8) -> Result<Flowchart> {
+pub fn parse_source(code: &str, title: &str, level: u8, lang: Language) -> Result<Flowchart> {
     let mut parser = Parser::new();
     let language = tree_sitter_c::LANGUAGE.into();
     parser
@@ -291,7 +296,7 @@ pub fn parse_source(code: &str, title: &str, level: u8) -> Result<Flowchart> {
         }
     }
 
-    let mut converter = C2Flowch::new(title.to_string(), level, code, known_functions);
+    let mut converter = C2Flowch::new(title.to_string(), level, code, lang, known_functions);
 
     // 2. Parse main (if exists) or the first function
     let start_node = if let Some(&n) = converter.known_functions.get("main") {
@@ -313,6 +318,7 @@ pub fn parse_source(code: &str, title: &str, level: u8) -> Result<Flowchart> {
                 &mut converter.flowchart,
                 Flowchart {
                     title: func_name.clone(),
+                    lang: converter.lang,
                     nodes: Vec::new(),
                     edges: Vec::new(),
                     subroutines: Vec::new(),

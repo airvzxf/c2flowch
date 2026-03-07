@@ -1,6 +1,5 @@
-use crate::ir::{
-    EDGE_LABEL_BREAK, EDGE_LABEL_DEPENDENCY, EDGE_LABEL_FALSE, EDGE_LABEL_TRUE, Flowchart, NodeType,
-};
+use crate::i18n::{I18n, Language};
+use crate::ir::{EDGE_LABEL_BREAK, EDGE_LABEL_DEPENDENCY, Flowchart, NodeType};
 use crate::render::canvas::AsciiRenderer;
 use crate::render::routing::RoutingDrawing;
 use crate::render::shapes::ShapeDrawing;
@@ -29,6 +28,7 @@ pub(crate) struct TraversalContext<'a> {
     pub node_dims: &'a mut HashMap<String, NodeDim>,
     pub lanes_width: &'a mut HashMap<usize, usize>,
     pub padding: usize,
+    pub lang: Language,
 }
 
 pub struct LayoutEngine<'a> {
@@ -43,10 +43,11 @@ pub struct LayoutEngine<'a> {
     node_pos: HashMap<String, (usize, usize)>,
     processed_nodes: HashMap<String, (usize, usize)>,
     padding: usize,
+    lang: Language,
 }
 
 impl<'a> LayoutEngine<'a> {
-    pub fn new(flowchart: &'a Flowchart, padding: usize) -> Self {
+    pub fn new(flowchart: &'a Flowchart, padding: usize, lang: Language) -> Self {
         let nodes_map: HashMap<String, &'a crate::ir::FlowNode> =
             flowchart.nodes.iter().map(|n| (n.id.clone(), n)).collect();
 
@@ -73,6 +74,7 @@ impl<'a> LayoutEngine<'a> {
             node_pos: HashMap::new(),
             processed_nodes: HashMap::new(),
             padding,
+            lang,
         }
     }
 
@@ -87,6 +89,7 @@ impl<'a> LayoutEngine<'a> {
                 node_dims: &mut self.node_dims,
                 lanes_width: &mut self.lanes_width,
                 padding: self.padding,
+                lang: self.lang,
             };
             traverse_assign_lanes(&start_node.id, 0, &mut ctx)?;
         }
@@ -346,6 +349,7 @@ impl<'a> LayoutEngine<'a> {
                     (x1, y1, dim1),
                     (x2, y2, dim2),
                     is_target_merge,
+                    self.lang,
                 );
             } else if is_decision {
                 Self::draw_decision_edge(
@@ -355,6 +359,7 @@ impl<'a> LayoutEngine<'a> {
                     (x1, y1, dim1),
                     (x2, y2, dim2),
                     is_target_merge,
+                    self.lang,
                 );
             } else if is_target_merge {
                 let mut collision = false;
@@ -581,8 +586,9 @@ impl<'a> LayoutEngine<'a> {
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
         is_target_merge: bool,
+        lang: Language,
     ) {
-        if label == Some(EDGE_LABEL_TRUE) {
+        if label == Some(I18n::t_true(lang)) {
             let sx = x1 + dim1.w - 1;
             let sy = y1 + dim1.h / 2;
             let ty = y2;
@@ -591,14 +597,14 @@ impl<'a> LayoutEngine<'a> {
                 sy,
                 x2 + dim2.w / 2,
                 ty,
-                Some(EDGE_LABEL_TRUE),
+                Some(I18n::t_true(lang)),
                 !is_target_merge,
             );
-        } else if label == Some(EDGE_LABEL_FALSE) {
+        } else if label == Some(I18n::t_false(lang)) {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(EDGE_LABEL_FALSE));
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(I18n::t_false(lang)));
         } else {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
@@ -614,14 +620,15 @@ impl<'a> LayoutEngine<'a> {
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
         is_target_merge: bool,
+        lang: Language,
     ) {
-        if label == Some(EDGE_LABEL_TRUE) {
+        if label == Some(I18n::t_true(lang)) {
             let mut sx = x1 + dim1.w - 1;
-            let mut display_label = EDGE_LABEL_TRUE;
+            let mut display_label = I18n::t_true(lang);
 
             if n1.node_type == NodeType::SwitchCase {
                 sx += 2;
-                display_label = EDGE_LABEL_TRUE;
+                display_label = I18n::t_true(lang);
             }
 
             let sy = y1 + dim1.h / 2;
@@ -634,14 +641,14 @@ impl<'a> LayoutEngine<'a> {
                 Some(display_label),
                 !is_target_merge,
             );
-        } else if label == Some(EDGE_LABEL_FALSE) {
+        } else if label == Some(I18n::t_false(lang)) {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(EDGE_LABEL_FALSE));
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(I18n::t_false(lang)));
         } else {
             if label.is_none() && n1.text.contains("opcion != 2") {
-                label = Some(EDGE_LABEL_FALSE);
+                label = Some(I18n::t_false(lang));
             }
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
@@ -652,28 +659,29 @@ impl<'a> LayoutEngine<'a> {
 }
 
 pub fn render_flowchart(flowchart: &Flowchart) -> Result<String> {
-    let mut final_render = render_flowchart_single(flowchart)?;
+    let mut final_render = render_flowchart_single(flowchart, flowchart.lang)?;
 
     for sub in &flowchart.subroutines {
         final_render.push_str("\n\n\n");
         let separator = format!(
-            "=========================================================\n            [ Subrutina: {} ]\n=========================================================",
+            "=========================================================\n            [ {}: {} ]\n=========================================================",
+            I18n::t_subroutine(flowchart.lang),
             sub.title
         );
         final_render.push_str(&separator);
         final_render.push_str("\n\n");
 
-        let sub_render = render_flowchart_single(sub)?;
+        let sub_render = render_flowchart_single(sub, sub.lang)?;
         final_render.push_str(&sub_render);
     }
 
     Ok(final_render)
 }
 
-fn render_flowchart_single(flowchart: &Flowchart) -> Result<String> {
+fn render_flowchart_single(flowchart: &Flowchart, lang: Language) -> Result<String> {
     let padding = 3;
 
-    let mut engine = LayoutEngine::new(flowchart, padding);
+    let mut engine = LayoutEngine::new(flowchart, padding, lang);
     engine.assign_lanes()?;
     engine.calculate_x_offsets();
     engine.place_nodes()?;
@@ -742,20 +750,23 @@ pub(crate) fn traverse_assign_lanes(
         let la = a.label.as_deref().unwrap_or("");
         let lb = b.label.as_deref().unwrap_or("");
 
+        let l_false = I18n::t_false(ctx.lang);
+        let l_true = I18n::t_true(ctx.lang);
+
         if is_loop_head {
-            if la == EDGE_LABEL_FALSE {
+            if la == l_false {
                 return std::cmp::Ordering::Less;
             }
-            if lb == EDGE_LABEL_FALSE {
+            if lb == l_false {
                 return std::cmp::Ordering::Greater;
             }
         }
 
-        if la == EDGE_LABEL_FALSE {
+        if la == l_false {
             std::cmp::Ordering::Less
-        } else if lb == EDGE_LABEL_FALSE || la == EDGE_LABEL_TRUE {
+        } else if lb == l_false || la == l_true {
             std::cmp::Ordering::Greater
-        } else if lb == EDGE_LABEL_TRUE {
+        } else if lb == l_true {
             std::cmp::Ordering::Less
         } else {
             std::cmp::Ordering::Equal
@@ -770,7 +781,7 @@ pub(crate) fn traverse_assign_lanes(
             .context("Missing context edge node")?;
         let is_exit = target_node.text == "MergeExit";
 
-        if is_exit && edge.label.as_deref() != Some(EDGE_LABEL_FALSE) {
+        if is_exit && edge.label.as_deref() != Some(I18n::t_false(ctx.lang)) {
             continue;
         }
 
@@ -781,12 +792,12 @@ pub(crate) fn traverse_assign_lanes(
         let next_lane_start = if node.text == "Merge" {
             lane
         } else if is_loop_head {
-            if edge.label.as_deref() == Some(EDGE_LABEL_FALSE) || edge.label.is_none() {
+            if edge.label.as_deref() == Some(I18n::t_false(ctx.lang)) || edge.label.is_none() {
                 lane
             } else {
                 lane + 1
             }
-        } else if edge.label.as_deref() == Some(EDGE_LABEL_TRUE) {
+        } else if edge.label.as_deref() == Some(I18n::t_true(ctx.lang)) {
             lane + 1
         } else {
             lane

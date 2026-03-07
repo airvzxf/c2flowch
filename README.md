@@ -14,9 +14,10 @@ Currently supports:
 
 ### 1. Parse C to YAML IR
 ```bash
-cargo run -- parse main.c -o flow.yaml --level 5
+cargo run -- parse main.c -o flow.yaml --level 5 --lang es
 ```
 - `--level 1-5`: Adjust detail level (5 is full line-by-line).
+- `--lang en|es`: Set the language for labels (default: en).
 
 ### 2. Render YAML to ASCII
 ```bash
@@ -31,6 +32,7 @@ cargo test
 
 ## Features
 - **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Parenthesized (Terminator), Double-lined Rectangles (Predefined Process/Subroutine).
+- **Static i18n Support**: Automatically translates UI labels and C keywords (e.g., "Inicio", "Fin", "Si", "No") based on the `--lang` flag (currently supports English and Spanish).
 - **Correct Padding**: Every node has symmetric 3-space padding, accounting for visual width of multi-byte characters like `ñ` and `í`.
 - **Level of Detail**: Filter out variable declarations or focus only on function calls.
 - **Human-in-the-loop**: The YAML intermediate format allows users to refine the diagram before final rendering.

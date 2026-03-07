@@ -35,7 +35,7 @@ for c_file in "$C_DIR"/*.c; do
     echo "Procesando: $base_name"
 
     # 1. Parseo: C -> YAML
-    if time cargo run --bin c2flowch --quiet -- parse "$c_file" --output "$yaml_output"; then
+    if time cargo run --bin c2flowch --quiet -- parse "$c_file" --output "$yaml_output" --lang es; then
         echo "  [OK] Parseo completado -> $yaml_output"
     else
         echo "  [ERROR] Falló el parseo de $c_file"

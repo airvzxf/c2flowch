@@ -1,3 +1,4 @@
+use crate::i18n::{I18n, Language};
 use std::sync::LazyLock;
 use tree_sitter::Node;
 
@@ -59,10 +60,10 @@ pub(crate) fn split_args(s: &str) -> Vec<String> {
     args
 }
 
-pub(crate) fn process_printf(inner: &str) -> String {
+pub(crate) fn process_printf(inner: &str, lang: Language) -> String {
     let args = split_args(inner);
     if args.is_empty() {
-        return "Imprimir".to_string();
+        return I18n::t_print(lang).to_string();
     }
 
     let fmt = &args[0];
@@ -107,7 +108,7 @@ pub(crate) fn process_printf(inner: &str) -> String {
         parts.push("\"\"".to_string());
     }
 
-    format!("Imprimir {}", parts.join(", "))
+    format!("{} {}", I18n::t_print(lang), parts.join(", "))
 }
 
 pub(crate) fn remove_pointer_syntax(text: &str) -> String {
@@ -214,7 +215,7 @@ pub(crate) fn remove_pointer_syntax(text: &str) -> String {
     result
 }
 
-pub(crate) fn clean_text(text: &str) -> String {
+pub(crate) fn clean_text(text: &str, lang: Language) -> String {
     let mut cleaned = remove_pointer_syntax(text.trim()).replace("\\n", "");
 
     for kw in KEYWORDS.iter() {
@@ -241,14 +242,14 @@ pub(crate) fn clean_text(text: &str) -> String {
             if cleaned.len() > start + call.len() {
                 let inner = &cleaned[start + call.len()..cleaned.len() - 1];
                 if call == "printf(" {
-                    return process_printf(inner);
+                    return process_printf(inner, lang);
                 }
                 let args = split_args(inner);
                 if !args.is_empty() {
-                    return format!("Imprimir {}", args[0]);
+                    return format!("{} {}", I18n::t_print(lang), args[0]);
                 }
             }
-            return "Imprimir".to_string();
+            return I18n::t_print(lang).to_string();
         }
     }
 
@@ -259,16 +260,16 @@ pub(crate) fn clean_text(text: &str) -> String {
                 if call == "scanf(" {
                     if let Some(comma_pos) = inner.find(',') {
                         let var = inner[comma_pos + 1..].trim().replace('&', "");
-                        return format!("Leer {var}");
+                        return format!("{} {var}", I18n::t_read(lang));
                     }
-                    return "Leer".to_string();
+                    return I18n::t_read(lang).to_string();
                 }
                 let args = split_args(inner);
                 if !args.is_empty() {
-                    return format!("Leer {}", args[0].replace('&', ""));
+                    return format!("{} {}", I18n::t_read(lang), args[0].replace('&', ""));
                 }
             }
-            return "Leer".to_string();
+            return I18n::t_read(lang).to_string();
         }
     }
 
@@ -443,27 +444,36 @@ mod tests {
 
     #[test]
     fn test_process_printf_basic() {
-        let res = process_printf("\"Value: %d\", x");
+        let res = process_printf("\"Value: %d\", x", Language::Es);
         assert_eq!(res, "Imprimir \"Value: \", x");
     }
 
     #[test]
     fn test_clean_text_io() {
-        assert_eq!(clean_text("puts(\"Hello\\n\");"), "Imprimir \"Hello\"");
-        assert_eq!(clean_text("puts(\"Hello\");"), "Imprimir \"Hello\"");
         assert_eq!(
-            clean_text("fputs(\"World\", stdout);"),
+            clean_text("puts(\"Hello\\n\");", Language::Es),
+            "Imprimir \"Hello\""
+        );
+        assert_eq!(
+            clean_text("puts(\"Hello\");", Language::Es),
+            "Imprimir \"Hello\""
+        );
+        assert_eq!(
+            clean_text("fputs(\"World\", stdout);", Language::Es),
             "Imprimir \"World\""
         );
-        assert_eq!(clean_text("putchar('A');"), "Imprimir 'A'");
-        assert_eq!(clean_text("gets(buf);"), "Leer buf");
-        assert_eq!(clean_text("fgets(buf, 10, stdin);"), "Leer buf");
+        assert_eq!(clean_text("putchar('A');", Language::Es), "Imprimir 'A'");
+        assert_eq!(clean_text("gets(buf);", Language::Es), "Leer buf");
+        assert_eq!(
+            clean_text("fgets(buf, 10, stdin);", Language::Es),
+            "Leer buf"
+        );
     }
 
     #[test]
     fn test_unify_member_access() {
-        assert_eq!(clean_text("linea->curp"), "linea.curp");
-        assert_eq!(clean_text("linea.curp"), "linea.curp");
+        assert_eq!(clean_text("linea->curp", Language::Es), "linea.curp");
+        assert_eq!(clean_text("linea.curp", Language::Es), "linea.curp");
         assert_eq!(clean_condition("linea->id > 0"), "linea.id > 0");
     }
 }
