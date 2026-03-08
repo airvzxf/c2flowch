@@ -85,10 +85,6 @@ impl SvgRenderer {
         ));
     }
 
-    fn add_text(&mut self, x: f64, y: f64, text: &str) {
-        self.add_text_aligned(x, y, text, "middle");
-    }
-
     fn add_text_aligned(&mut self, x: f64, y: f64, text: &str, anchor: &str) {
         self.elements.push(format!(
             r#"<text x="{}" y="{}" fill="black" dominant-baseline="middle" text-anchor="{}">{}</text>"#,
@@ -190,9 +186,14 @@ impl ShapeDrawing for SvgRenderer {
         let lines: Vec<&str> = text.split('\n').collect();
         let n_lines = lines.len() as f64;
 
+        let max_chars = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+        let approx_char_width = 8.4; // width of a 14px monospace character
+        let block_width = max_chars as f64 * approx_char_width;
+        let start_x = cx - (block_width / 2.0);
+
         for (i, line) in lines.iter().enumerate() {
             let offset = (i as f64 - (n_lines - 1.0) / 2.0) * 16.0; // 16px line height approx
-            self.add_text(cx, cy + offset, line);
+            self.add_text_aligned(start_x, cy + offset, line, "start");
         }
     }
 
