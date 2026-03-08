@@ -82,9 +82,10 @@ impl SvgRenderer {
             let dy = y2 - y1;
             let len = (dx * dx + dy * dy).sqrt();
             if len > 0.0 {
-                // Pull back the end of the line by exactly 10 user units
-                // so it doesn't poke out of the arrowhead tip.
-                let pullback = len.min(10.0);
+                // Pull back the end of the line by 15 user units
+                // so it doesn't poke out of the arrowhead tip, and prevents
+                // the tip from overlapping thick black target borders.
+                let pullback = len.min(15.0);
                 x2_mod = x2 - (dx / len) * pullback;
                 y2_mod = y2 - (dy / len) * pullback;
             }
