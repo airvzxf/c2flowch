@@ -1,11 +1,11 @@
 # C2Flowch - Project Management
 
 ## 1. Original Vision & Context (DRAFT)
-Convert C source code into clean, readable ANSI flowcharts with a focus on:
+Convert C source code into clean, readable ANSI and ISO 5807 flowcharts with a focus on:
 - **Human-in-the-loop:** Intermediate YAML representation for manual adjustments.
 - **Detail Levels:** Range from executive summaries (Level 1) to technical details (Level 5).
 - **Clarity:** Avoid "spaghetti" lines; prefer clean ASCII/Unicode layouts initially.
-- **Standardization:** Adhere to ANSI flowchart shapes (Process, Decision, I/O, Terminator).
+- **Standardization:** Adhere to ANSI and ISO 5807 flowchart shapes (Process, Decision, I/O, Terminator).
 
 ## 2. Development Plan & Strategy
 ### Persona Analysis
@@ -14,19 +14,19 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - **UX/UI:** Clean CLI flow: `parse` -> `edit` -> `render`.
 
 ### Technical Architecture
-1. **Cargo Workspaces:** Separated into `c2flowch-core` (pure logic) and `c2flowch` (CLI/IO).
+1. **Cargo Workspaces:** Separated into `c2flowch-core` (pure logic) and `c2flowch` (CLI/IO). Designed for future WebAssembly (Wasm) support.
 2. **Parser (Rust + Tree-sitter):** CST generation inside `core`.
 3. **Transformer:** CST -> IR (Intermediate Representation) with detail filtering.
 4. **IR (YAML):** Editable bridge between code and diagram.
 5. **Layout Engine:** Lane-based grid (Lane 120 as main flow).
-6. **Renderer:** ASCII/Unicode (initially) and SVG (planned).
+6. **Renderer:** ASCII/Unicode, professional SVG, and high-quality rasterized PNG.
 
 ---
 
 ## 3. Current Project State
 - **Language:** Rust
 - **Parser:** tree-sitter-c
-- **Core Pipeline:** Functional C -> YAML -> ASCII pipeline.
+- **Core Pipeline:** Functional C -> YAML -> ASCII/SVG/PNG pipeline.
 - **Recent Achievements:**
     - [x] **Architecture:** Refactored project into Cargo Workspaces (`core`, `cli`) to decouple IO from pure logic, paving the way for WebAssembly (Wasm) support.
     - [x] Subroutine/Function call rendering (`PredefinedProcess`).
@@ -58,22 +58,11 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **CLI UX Improvements:**
     - Add version, author, and extended descriptions to `--help`.
     - Document detail levels (1-5) clearly in the CLI help text.
-    - Implement human-friendly error messages using `anyhow` context (e.g., file not found).
 - [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
-- [ ] **SVG Polish:**
-    - [ ] Reduce extra canvas space at the bottom of generated SVG diagrams.
-    - [x] Fix arrow marker overlap in vertical and horizontal lines.
-- [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
-- [x] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
-- [x] **i18n:** Formal support for multiple languages (English and Spanish implemented).
 - [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
+- [ ] **Documentation:** Finalize README and help messages.
 
 ### Phase 5: Expansion
 - [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
-- [x] **Export to Image (PNG):** Added high-quality SVG rasterization via `resvg` with embedded typography.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
-- [x] **Subroutine Splitting:** Implement `--split-subroutines` flag to output functions in separate files. For future WebAssembly integration, the core logic returns an array/JSON of rendered subroutines in memory to be handled by the frontend (tabs, scrolling, or zip download) without local filesystem access.
-- [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
-- [ ] **Loop Rendering:** Further refine visualization of back-edges in `do-while/for`.
-- [ ] **Documentation:** Finalize README and help messages.

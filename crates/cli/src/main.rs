@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "c2flowch")]
-#[command(about = "Convert C source code into ANSI flowcharts", long_about = None)]
+#[command(about = "Convert C source code into ANSI and ISO 5807 flowcharts", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
