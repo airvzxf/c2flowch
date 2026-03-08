@@ -73,7 +73,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
 - [x] **Export to Image (PNG):** Added high-quality SVG rasterization via `resvg` with embedded typography.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
-- [ ] **Subroutine Splitting:** Implement `--split-subroutines` flag to output functions in separate files.
+- [x] **Subroutine Splitting:** Implement `--split-subroutines` flag to output functions in separate files. For future WebAssembly integration, the core logic returns an array/JSON of rendered subroutines in memory to be handled by the frontend (tabs, scrolling, or zip download) without local filesystem access.
 - [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
 - [ ] **Loop Rendering:** Further refine visualization of back-edges in `do-while/for`.
 - [ ] **Documentation:** Finalize README and help messages.

@@ -43,6 +43,7 @@ cargo test
 
 ## Features
 - **ANSI Standard Shapes**: Boxes (Process), Diamonds (Decision), Parallelograms (I/O), Parenthesized (Terminator), Double-lined Rectangles (Predefined Process/Subroutine).
+- **Subroutine Splitting**: Modular generation via `--split-subroutines` allows decoupling functions into separate files (in CLI) or lists in memory (for future WebAssembly apps).
 - **Professional SVG Export**: Native vector output with precise coordinate mapping, support for multiline headers (custom info), and automatic subroutine stacking.
 - **Static i18n Support**: Automatically translates UI labels and C keywords (e.g., "Inicio", "Fin", "Si", "No") based on the `--lang` flag (currently supports English and Spanish).
 - **Correct Padding**: Every node has symmetric 3-space padding, accounting for visual width of multi-byte characters like `ñ` and `í`.
