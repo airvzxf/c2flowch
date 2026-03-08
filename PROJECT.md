@@ -39,6 +39,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
     - [x] **Bug Fix:** Resolved junction character issues (e.g., missing `┬`) at node/line boundaries.
     - [x] **Advanced Edge Routing:** Implemented dynamic cascading offsets for nested branch avoidance (switch/break logic).
     - [x] **Determinism:** Fixed non-deterministic subroutine ordering by stabilizing parser discovery (alphabetical fallback).
+    - [x] **SVG Typography:** Implemented block-centered left-aligned text for all node shapes to ensure professional readability while maintaining symmetry.
     - [x] **i18n:** Implemented a static translation system and language metadata in the IR, supporting English and Spanish.
     - [x] **SVG Export:** Implemented a professional vector rendering engine with precise coordinate mapping, intelligent text-anchor alignment, multiline title support, and automatic subroutine stacking.
 
@@ -59,6 +60,9 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
     - Document detail levels (1-5) clearly in the CLI help text.
     - Implement human-friendly error messages using `anyhow` context (e.g., file not found).
 - [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
+- [ ] **SVG Polish:**
+    - [ ] Reduce extra canvas space at the bottom of generated SVG diagrams.
+    - [ ] Fix arrow marker overlap in vertical and horizontal lines.
 - [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [x] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
 - [x] **i18n:** Formal support for multiple languages (English and Spanish implemented).
@@ -67,7 +71,9 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 
 ### Phase 5: Expansion
 - [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
+- [ ] **Export to Image (PNG):** Add support for PNG generation.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
+- [ ] **Subroutine Splitting:** Implement `--split-subroutines` flag to output functions in separate files.
 - [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
-- [ ] **Loop Rendering:** Improve visualization of back-edges in `do-while/for`.
+- [ ] **Loop Rendering:** Further refine visualization of back-edges in `do-while/for`.
 - [ ] **Documentation:** Finalize README and help messages.

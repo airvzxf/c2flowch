@@ -1,15 +1,21 @@
-# C2Flowch - C to Flowchart (ANSI/ASCII)
+# C2Flowch - C to Flowchart (ANSI/ISO 5807)
 
-Convert C source code into clean, readable ASCII flowcharts with an intermediate YAML representation.
+**c2flowch** is a high-performance Rust library and CLI tool that converts C source code into clean, professional flowcharts adhering to ANSI and ISO 5807 standards.
+
+## Architecture
+The project is designed as a modular **Cargo Workspace**:
+- **`c2flowch-core`**: A pure Rust library (no-std compatible in the future) containing the parser and renderers.
+- **`c2flowch`**: A CLI wrapper for the core library.
+- **WebAssembly (Planned)**: The core library is designed to be easily compiled to Wasm for web integration.
 
 ## Status: Alpha
 Currently supports:
-- Basic C syntax (declarations, assignments, if/else, do/while, for).
-- Subroutines and function calls (automatic sub-diagram generation).
-- Intermediate YAML representation for manual adjustment.
-- ASCII and professional SVG rendering with a lane-based layout.
-- High-precision vector export with intelligent label alignment and multiline titles.
-- Symmetric 3-space padding and full support for Spanish characters (UTF-8).
+- **Standards Compliance**: Adheres to ANSI and ISO 5807 flowchart symbols.
+- **Multiple Formats**: Renders as clean ASCII (for terminals) and professional SVG (for documentation).
+- **Human-in-the-loop**: Uses an intermediate YAML representation for manual adjustments.
+- **Advanced Logic**: Supports basic C syntax, nested branches, loops, and automatic subroutine discovery.
+- **i18n**: Built-in support for English and Spanish labels.
+- **UTF-8 Support**: Full support for multi-byte characters (ñ, á, etc.) with correct visual padding.
 
 ## Usage
 
