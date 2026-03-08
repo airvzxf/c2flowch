@@ -711,7 +711,6 @@ pub fn render_svg(flowchart: &Flowchart) -> Result<String> {
     }
 
     let mut engines = Vec::new();
-    let mut total_h = 0;
     let mut max_w = 0;
 
     for (chart, is_sub) in &charts {
@@ -737,22 +736,24 @@ pub fn render_svg(flowchart: &Flowchart) -> Result<String> {
             *is_sub,
         ));
 
-        total_h += chart_max_y + 10;
         max_w = max_w.max(chart_max_x);
     }
 
-    for (chart, _is_sub) in &charts {
-        let title_lines = chart.title.trim().split('\n').count();
-        total_h += (title_lines as f64 * 1.25).ceil() as usize;
-    }
-
     max_w += 20; // smaller right padding instead of 150
-    total_h += 5; // bottom padding
-
-    let mut renderer = crate::render::svg::SvgRenderer::new(max_w, total_h);
 
     let main_title_lines = flowchart.title.trim().split('\n').count();
     let mut current_y = main_title_lines;
+    let mut total_h = main_title_lines;
+
+    for (_, _, cy, _, _) in &engines {
+        total_h += cy + 10;
+    }
+
+    if !engines.is_empty() {
+        total_h -= 8; // Reduce the 10 padding to just 2 for the last element's bottom padding
+    }
+
+    let mut renderer = crate::render::svg::SvgRenderer::new(max_w, total_h);
 
     for (engine, _cx, cy, title, is_sub) in engines {
         renderer.set_offset(0.0, current_y as f64);
