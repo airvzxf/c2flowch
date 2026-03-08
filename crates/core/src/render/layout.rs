@@ -245,7 +245,7 @@ impl<'a> LayoutEngine<'a> {
         Ok(())
     }
 
-    pub fn draw_nodes(&self, renderer: &mut AsciiRenderer) -> Result<()> {
+    pub fn draw_nodes<R: ShapeDrawing>(&self, renderer: &mut R) -> Result<()> {
         for (id, (x, y)) in &self.node_pos {
             let node = self.nodes_map.get(id).context("Missing node_map")?;
             let dim = self.node_dims.get(id).context("Missing node_dim")?;
@@ -270,7 +270,7 @@ impl<'a> LayoutEngine<'a> {
         Ok(())
     }
 
-    pub fn draw_edges(&self, renderer: &mut AsciiRenderer) -> Result<()> {
+    pub fn draw_edges<R: RoutingDrawing>(&self, renderer: &mut R) -> Result<()> {
         for edge in &self.flowchart.edges {
             if edge.label.as_deref() == Some(EDGE_LABEL_DEPENDENCY) {
                 continue;
@@ -384,21 +384,29 @@ impl<'a> LayoutEngine<'a> {
                 if collision {
                     self.draw_break_edge(renderer, edge, (x1, y1, dim1), (x2, y2, dim2))?;
                 } else {
-                    renderer.draw_merge_left(x1 + dim1.w / 2, y1 + dim1.h, x2 + dim2.w / 2, y2);
+                    let from_node = !n1.text.starts_with("Merge");
+                    renderer.draw_merge_left(
+                        x1 + dim1.w / 2,
+                        y1 + dim1.h,
+                        x2 + dim2.w / 2,
+                        y2,
+                        from_node,
+                    );
                 }
             } else {
                 let sx = x1 + dim1.w / 2;
                 let sy = y1 + dim1.h;
                 let ty = y2;
-                renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+                let from_node = !n1.text.starts_with("Merge");
+                renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label, from_node);
             }
         }
         Ok(())
     }
 
-    fn draw_back_edge(
+    fn draw_back_edge<R: RoutingDrawing>(
         &self,
-        renderer: &mut AsciiRenderer,
+        renderer: &mut R,
         edge: &crate::ir::FlowEdge,
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
@@ -513,9 +521,9 @@ impl<'a> LayoutEngine<'a> {
         Ok(())
     }
 
-    fn draw_break_edge(
+    fn draw_break_edge<R: RoutingDrawing>(
         &self,
-        renderer: &mut AsciiRenderer,
+        renderer: &mut R,
         edge: &crate::ir::FlowEdge,
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
@@ -550,38 +558,12 @@ impl<'a> LayoutEngine<'a> {
 
         let collector_x = base_collector_x + depth_inside * 4;
 
-        let y_turn = sy + 2;
-        renderer.draw_vertical_line(sx, sy, y_turn, false, None);
-
-        renderer.set_char_force(sx, y_turn, '└', crate::render::canvas::CellType::LineCorner);
-        for x in (sx + 1)..collector_x {
-            renderer.set_char_force(x, y_turn, '─', crate::render::canvas::CellType::LineH);
-        }
-
-        renderer.set_char_force(
-            collector_x,
-            y_turn,
-            '┐',
-            crate::render::canvas::CellType::LineCorner,
-        );
-        renderer.draw_vertical_line(collector_x, y_turn + 1, ty, false, None);
-
-        renderer.set_char_force(
-            collector_x,
-            ty,
-            '┘',
-            crate::render::canvas::CellType::LineCorner,
-        );
-        for x in (tx + 2)..collector_x {
-            renderer.set_char_force(x, ty, '─', crate::render::canvas::CellType::LineH);
-        }
-        renderer.set_char_force(tx + 1, ty, '🭮', crate::render::canvas::CellType::Arrow);
-        renderer.set_char_force(tx, ty, '├', crate::render::canvas::CellType::LineCorner);
+        renderer.draw_break_line(sx, sy, tx, ty, collector_x);
         Ok(())
     }
 
-    fn draw_loop_head_edge(
-        renderer: &mut AsciiRenderer,
+    fn draw_loop_head_edge<R: RoutingDrawing>(
+        renderer: &mut R,
         label: Option<&str>,
         (x1, y1, dim1): (usize, usize, &NodeDim),
         (x2, y2, dim2): (usize, usize, &NodeDim),
@@ -604,17 +586,24 @@ impl<'a> LayoutEngine<'a> {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(I18n::t_false(lang)));
+            renderer.draw_vertical_line(
+                sx,
+                sy,
+                ty,
+                !is_target_merge,
+                Some(I18n::t_false(lang)),
+                true,
+            );
         } else {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label, true);
         }
     }
 
-    fn draw_decision_edge(
-        renderer: &mut AsciiRenderer,
+    fn draw_decision_edge<R: RoutingDrawing>(
+        renderer: &mut R,
         n1: &crate::ir::FlowNode,
         mut label: Option<&str>,
         (x1, y1, dim1): (usize, usize, &NodeDim),
@@ -645,7 +634,14 @@ impl<'a> LayoutEngine<'a> {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, Some(I18n::t_false(lang)));
+            renderer.draw_vertical_line(
+                sx,
+                sy,
+                ty,
+                !is_target_merge,
+                Some(I18n::t_false(lang)),
+                true,
+            );
         } else {
             if label.is_none() && n1.text.contains("opcion != 2") {
                 label = Some(I18n::t_false(lang));
@@ -653,7 +649,7 @@ impl<'a> LayoutEngine<'a> {
             let sx = x1 + dim1.w / 2;
             let sy = y1 + dim1.h;
             let ty = y2;
-            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label);
+            renderer.draw_vertical_line(sx, sy, ty, !is_target_merge, label, true);
         }
     }
 }
@@ -702,6 +698,77 @@ fn render_flowchart_single(flowchart: &Flowchart, lang: Language) -> Result<Stri
 
     engine.draw_nodes(&mut renderer)?;
     engine.draw_edges(&mut renderer)?;
+
+    Ok(renderer.render())
+}
+
+pub fn render_svg(flowchart: &Flowchart) -> Result<String> {
+    let padding = 3;
+
+    let mut charts = vec![(flowchart, false)];
+    for sub in &flowchart.subroutines {
+        charts.push((sub, true));
+    }
+
+    let mut engines = Vec::new();
+    let mut total_h = 0;
+    let mut max_w = 0;
+
+    for (chart, is_sub) in &charts {
+        let mut engine = LayoutEngine::new(chart, padding, chart.lang);
+        engine.assign_lanes()?;
+        engine.calculate_x_offsets();
+        engine.place_nodes()?;
+
+        let mut chart_max_x = 0;
+        let mut chart_max_y = 0;
+        for (id, (x, y)) in &engine.node_pos {
+            if let Some(dim) = engine.node_dims.get(id) {
+                chart_max_x = chart_max_x.max(x + dim.w);
+                chart_max_y = chart_max_y.max(y + dim.h);
+            }
+        }
+
+        engines.push((
+            engine,
+            chart_max_x,
+            chart_max_y,
+            chart.title.clone(),
+            *is_sub,
+        ));
+
+        total_h += chart_max_y + 10;
+        max_w = max_w.max(chart_max_x);
+    }
+
+    for (chart, _is_sub) in &charts {
+        let title_lines = chart.title.trim().split('\n').count();
+        total_h += (title_lines as f64 * 1.25).ceil() as usize;
+    }
+
+    max_w += 20; // smaller right padding instead of 150
+    total_h += 5; // bottom padding
+
+    let mut renderer = crate::render::svg::SvgRenderer::new(max_w, total_h);
+
+    let main_title_lines = flowchart.title.trim().split('\n').count();
+    let mut current_y = main_title_lines;
+
+    for (engine, _cx, cy, title, is_sub) in engines {
+        renderer.set_offset(0.0, current_y as f64);
+
+        let display_title = if is_sub {
+            format!("{}: {}", I18n::t_subroutine(flowchart.lang), title)
+        } else {
+            title
+        };
+        renderer.add_title(&display_title);
+
+        engine.draw_edges(&mut renderer)?;
+        engine.draw_nodes(&mut renderer)?;
+
+        current_y += cy + 10;
+    }
 
     Ok(renderer.render())
 }

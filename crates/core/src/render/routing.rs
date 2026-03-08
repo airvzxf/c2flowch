@@ -8,6 +8,7 @@ pub trait RoutingDrawing {
         y2: usize,
         arrow: bool,
         label: Option<&str>,
+        from_node: bool,
     );
     fn draw_horizontal_right_line(&mut self, x1: usize, x2: usize, y: usize, label: Option<&str>);
     fn draw_elbow_right_down(
@@ -19,7 +20,14 @@ pub trait RoutingDrawing {
         label: Option<&str>,
         arrow: bool,
     );
-    fn draw_merge_left(&mut self, x_node: usize, y_start: usize, x_target: usize, y_end: usize);
+    fn draw_merge_left(
+        &mut self,
+        x_node: usize,
+        y_start: usize,
+        x_target: usize,
+        y_end: usize,
+        from_node: bool,
+    );
     #[allow(clippy::too_many_arguments)]
     fn draw_loop_back(
         &mut self,
@@ -46,6 +54,7 @@ pub trait RoutingDrawing {
         draw_arrow: bool,
         join_y: usize,
     );
+    fn draw_break_line(&mut self, sx: usize, sy: usize, tx: usize, ty: usize, collector_x: usize);
 }
 
 impl RoutingDrawing for AsciiRenderer {
@@ -56,6 +65,7 @@ impl RoutingDrawing for AsciiRenderer {
         y2: usize,
         arrow: bool,
         label: Option<&str>,
+        _from_node: bool,
     ) {
         if y1 >= y2 {
             return;
@@ -100,16 +110,23 @@ impl RoutingDrawing for AsciiRenderer {
     ) {
         self.draw_horizontal_right_line(x1, x2, y1, label);
         self.set_char_force(x2, y1, '┐', CellType::LineCorner);
-        self.draw_vertical_line(x2, y1 + 1, y2, arrow, None);
+        self.draw_vertical_line(x2, y1 + 1, y2, arrow, None, false);
     }
 
-    fn draw_merge_left(&mut self, x_node: usize, y_start: usize, x_target: usize, y_end: usize) {
+    fn draw_merge_left(
+        &mut self,
+        x_node: usize,
+        y_start: usize,
+        x_target: usize,
+        y_end: usize,
+        _from_node: bool,
+    ) {
         let turn_y = y_end;
         if x_node == x_target {
-            self.draw_vertical_line(x_node, y_start, turn_y, false, None);
+            self.draw_vertical_line(x_node, y_start, turn_y, false, None, _from_node);
             return;
         }
-        self.draw_vertical_line(x_node, y_start, turn_y, false, None);
+        self.draw_vertical_line(x_node, y_start, turn_y, false, None, _from_node);
         if x_target < x_node {
             self.set_char_force(x_node, turn_y, '┘', CellType::LineCorner);
             for x in (x_target + 2..x_node).rev() {
@@ -232,5 +249,25 @@ impl RoutingDrawing for AsciiRenderer {
             self.set_char_force(x_target, y_target - 1, '🭭', CellType::Arrow);
         }
         self.set_char(x_target, join_y - 1, '│', CellType::LineV);
+    }
+
+    fn draw_break_line(&mut self, sx: usize, sy: usize, tx: usize, ty: usize, collector_x: usize) {
+        let y_turn = sy + 2;
+        self.draw_vertical_line(sx, sy, y_turn, false, None, true);
+
+        self.set_char_force(sx, y_turn, '└', CellType::LineCorner);
+        for x in (sx + 1)..collector_x {
+            self.set_char_force(x, y_turn, '─', CellType::LineH);
+        }
+
+        self.set_char_force(collector_x, y_turn, '┐', CellType::LineCorner);
+        self.draw_vertical_line(collector_x, y_turn + 1, ty, false, None, false);
+
+        self.set_char_force(collector_x, ty, '┘', CellType::LineCorner);
+        for x in (tx + 2)..collector_x {
+            self.set_char_force(x, ty, '─', CellType::LineH);
+        }
+        self.set_char_force(tx + 1, ty, '🭮', CellType::Arrow);
+        self.set_char_force(tx, ty, '├', CellType::LineCorner);
     }
 }

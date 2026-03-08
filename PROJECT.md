@@ -40,6 +40,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
     - [x] **Advanced Edge Routing:** Implemented dynamic cascading offsets for nested branch avoidance (switch/break logic).
     - [x] **Determinism:** Fixed non-deterministic subroutine ordering by stabilizing parser discovery (alphabetical fallback).
     - [x] **i18n:** Implemented a static translation system and language metadata in the IR, supporting English and Spanish.
+    - [x] **SVG Export:** Implemented a professional vector rendering engine with precise coordinate mapping, intelligent text-anchor alignment, multiline title support, and automatic subroutine stacking.
 
 ---
 
@@ -50,6 +51,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [x] AST -> IR Transformer (If, While, For, Decls).
 - [x] Level of Detail filtering (1-5).
 - [x] Lane-based ASCII Renderer.
+- [x] High-precision SVG Renderer.
 
 ### Phase 4: Polish (In Progress)
 - [ ] **CLI UX Improvements:**
@@ -64,8 +66,8 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **Global Variables:** Special visualization at the start of the flow.
 
 ### Phase 5: Expansion
+- [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
 - [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
-- [ ] **SVG Export:** Native SVG writer or Graphviz backend (needs adaptation for multi-function flowcharts).
 - [ ] **Loop Rendering:** Improve visualization of back-edges in `do-while/for`.
 - [ ] **Documentation:** Finalize README and help messages.

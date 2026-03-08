@@ -107,7 +107,13 @@ fn main() -> Result<()> {
                     }
                 }
                 RenderFormat::Svg => {
-                    anyhow::bail!("Format svg not supported yet");
+                    let result = c2flowch_core::render::render_svg(&flowchart)?;
+                    if let Some(out_path) = output {
+                        fs::write(&out_path, &result)?;
+                        println!("Diagram saved to {}", out_path.display());
+                    } else {
+                        println!("{result}");
+                    }
                 }
             }
         }
