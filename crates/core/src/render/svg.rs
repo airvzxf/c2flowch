@@ -60,7 +60,7 @@ impl SvgRenderer {
             r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" width="{}" height="{}">"#,
             w, h, w, h
         );
-        svg.push_str(r#"<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="black" /></marker></defs>"#);
+        svg.push_str(r#"<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="black" /></marker></defs>"#);
         svg.push_str(r#"<style>text { font-family: monospace; font-size: 14px; }</style>"#);
         svg.push_str(r#"<rect width="100%" height="100%" fill="white" />"#);
 
@@ -74,6 +74,22 @@ impl SvgRenderer {
     }
 
     fn add_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, arrow: bool) {
+        let mut x2_mod = x2;
+        let mut y2_mod = y2;
+
+        if arrow {
+            let dx = x2 - x1;
+            let dy = y2 - y1;
+            let len = (dx * dx + dy * dy).sqrt();
+            if len > 0.0 {
+                // Pull back the end of the line by exactly 10 user units
+                // so it doesn't poke out of the arrowhead tip.
+                let pullback = len.min(10.0);
+                x2_mod = x2 - (dx / len) * pullback;
+                y2_mod = y2 - (dy / len) * pullback;
+            }
+        }
+
         let marker = if arrow {
             r#" marker-end="url(#arrowhead)""#
         } else {
@@ -81,7 +97,7 @@ impl SvgRenderer {
         };
         self.elements.push(format!(
             r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="black" stroke-width="2"{} />"#,
-            x1, y1, x2, y2, marker
+            x1, y1, x2_mod, y2_mod, marker
         ));
     }
 
