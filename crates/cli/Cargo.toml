@@ -1,6 +1,7 @@
 [package]
 name = "c2flowch"
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
 default-run = "c2flowch"
 

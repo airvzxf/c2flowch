@@ -55,7 +55,7 @@ Convert C source code into clean, readable ANSI and ISO 5807 flowcharts with a f
 - [x] High-precision SVG Renderer.
 
 ### Phase 4: Polish (In Progress)
-- [ ] **CLI UX Improvements:**
+- [x] **CLI UX Improvements:**
     - Add version, author, and extended descriptions to `--help`.
     - Document detail levels (1-5) clearly in the CLI help text.
 - [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
