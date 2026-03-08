@@ -61,7 +61,9 @@ impl SvgRenderer {
             w, h, w, h
         );
         svg.push_str(r#"<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="black" /></marker></defs>"#);
-        svg.push_str(r#"<style>text { font-family: monospace; font-size: 14px; }</style>"#);
+        svg.push_str(
+            r#"<style>text { font-family: monospace; font-size: 14px; font-weight: 400; }</style>"#,
+        );
         svg.push_str(r#"<rect width="100%" height="100%" fill="white" />"#);
 
         for el in &self.elements {

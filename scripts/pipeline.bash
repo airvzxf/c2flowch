@@ -14,11 +14,13 @@ C_DIR="resources/c"
 YAML_DIR="resources/yaml"
 ASCII_DIR="resources/ascii"
 SVG_DIR="resources/svg"
+PNG_DIR="resources/png"
 
 # Crear directorios de salida si no existen
 mkdir -p "${YAML_DIR}"
 mkdir -p "${ASCII_DIR}"
 mkdir -p "${SVG_DIR}"
+mkdir -p "${PNG_DIR}"
 
 echo "=== Iniciando Pipeline de C2Flowch ==="
 
@@ -33,6 +35,7 @@ for c_file in "${C_DIR}"/*.c; do
     yaml_output="${YAML_DIR}/${base_name}.yaml"
     ascii_output="${ASCII_DIR}/${base_name}.txt"
     svg_output="${SVG_DIR}/${base_name}.svg"
+    png_output="${PNG_DIR}/${base_name}.png"
 
     echo "------------------------------------------------"
     echo "Procesando: ${base_name}"
@@ -58,6 +61,14 @@ for c_file in "${C_DIR}"/*.c; do
         echo "  [OK] Renderizado completado -> ${svg_output}"
     else
         echo "  [ERROR] Falló el renderizado de ${yaml_output} a SVG"
+        continue
+    fi
+
+    # 4. Renderizado: YAML -> PNG
+    if time cargo run --bin c2flowch --quiet -- render "${yaml_output}" --format png --output "${png_output}"; then
+        echo "  [OK] Renderizado completado -> ${png_output}"
+    else
+        echo "  [ERROR] Falló el renderizado de ${yaml_output} a PNG"
         continue
     fi
 done

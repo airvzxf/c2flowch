@@ -18,6 +18,7 @@ struct Cli {
 enum RenderFormat {
     Ascii,
     Svg,
+    Png,
 }
 
 impl std::fmt::Display for RenderFormat {
@@ -25,6 +26,7 @@ impl std::fmt::Display for RenderFormat {
         match self {
             RenderFormat::Ascii => write!(f, "ascii"),
             RenderFormat::Svg => write!(f, "svg"),
+            RenderFormat::Png => write!(f, "png"),
         }
     }
 }
@@ -52,7 +54,7 @@ enum Commands {
         /// The output file (optional)
         #[arg(short, long)]
         output: Option<PathBuf>,
-        /// Format (ascii, svg)
+        /// Format (ascii, svg, png)
         #[arg(short, long, default_value = "ascii")]
         format: RenderFormat,
     },
@@ -113,6 +115,57 @@ fn main() -> Result<()> {
                         println!("Diagram saved to {}", out_path.display());
                     } else {
                         println!("{result}");
+                    }
+                }
+                RenderFormat::Png => {
+                    let svg_string = c2flowch_core::render::render_svg(&flowchart)?;
+
+                    let mut fontdb = resvg::usvg::fontdb::Database::new();
+                    fontdb.load_system_fonts();
+
+                    // Embed a guaranteed high-quality, readable font into the binary.
+                    // IBM Plex Mono Medium is slightly thicker than Regular, solving the "thin/gray" issue in rasterized SVGs.
+                    let font_data_medium =
+                        include_bytes!("../../../resources/fonts/IBMPlexMono-Medium.ttf");
+                    fontdb.load_font_data(font_data_medium.to_vec());
+
+                    let font_data_bold =
+                        include_bytes!("../../../resources/fonts/IBMPlexMono-Bold.ttf");
+                    fontdb.load_font_data(font_data_bold.to_vec());
+
+                    let font_data_italic =
+                        include_bytes!("../../../resources/fonts/IBMPlexMono-Italic.ttf");
+                    fontdb.load_font_data(font_data_italic.to_vec());
+
+                    // Force our embedded font as the primary monospace fallback
+                    fontdb.set_monospace_family("IBM Plex Mono");
+
+                    let opt = resvg::usvg::Options {
+                        fontdb: std::sync::Arc::new(fontdb),
+                        ..Default::default()
+                    };
+
+                    let tree = resvg::usvg::Tree::from_str(&svg_string, &opt)
+                        .map_err(|e| anyhow::anyhow!("SVG parsing failed: {}", e))?;
+
+                    let pixmap_size = tree.size().to_int_size();
+                    let mut pixmap =
+                        resvg::tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height())
+                            .ok_or_else(|| anyhow::anyhow!("Failed to create pixmap"))?;
+
+                    resvg::render(
+                        &tree,
+                        resvg::tiny_skia::Transform::default(),
+                        &mut pixmap.as_mut(),
+                    );
+
+                    if let Some(out_path) = output {
+                        pixmap.save_png(&out_path)?;
+                        println!("Diagram saved to {}", out_path.display());
+                    } else {
+                        let png_data = pixmap.encode_png()?;
+                        use std::io::Write;
+                        std::io::stdout().write_all(&png_data)?;
                     }
                 }
             }

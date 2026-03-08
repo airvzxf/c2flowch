@@ -62,7 +62,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 - [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
 - [ ] **SVG Polish:**
     - [ ] Reduce extra canvas space at the bottom of generated SVG diagrams.
-    - [ ] Fix arrow marker overlap in vertical and horizontal lines.
+    - [x] Fix arrow marker overlap in vertical and horizontal lines.
 - [ ] **Function calls in conditions:** Extract and render subroutines when called inside `if`/`while` conditions.
 - [x] **Advanced Edge Routing:** Refine branch avoidance for complex nested logic.
 - [x] **i18n:** Formal support for multiple languages (English and Spanish implemented).
@@ -71,7 +71,7 @@ Convert C source code into clean, readable ANSI flowcharts with a focus on:
 
 ### Phase 5: Expansion
 - [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
-- [ ] **Export to Image (PNG):** Add support for PNG generation.
+- [x] **Export to Image (PNG):** Added high-quality SVG rasterization via `resvg` with embedded typography.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
 - [ ] **Subroutine Splitting:** Implement `--split-subroutines` flag to output functions in separate files.
 - [ ] **Deep Recursion visualization:** Improve visual representation of deep recursion (currently flat).
