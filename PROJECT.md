@@ -58,11 +58,13 @@ Convert C source code into clean, readable ANSI and ISO 5807 flowcharts with a f
 - [x] **CLI UX Improvements:**
     - Add version, author, and extended descriptions to `--help`.
     - Document detail levels (1-5) clearly in the CLI help text.
-- [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
-- [ ] **Visuals:** Colored terminal output support.
 - [ ] **Global Variables:** Special visualization at the start of the flow.
-- [ ] **Documentation:** Finalize README and help messages.
 
 ### Phase 5: Expansion
 - [ ] **WebAssembly Integration:** Create `c2flowch-wasm` crate to expose core logic to the browser.
 - [ ] **Multi-file support:** Scan headers to resolve and render functions from multiple files.
+
+### Phase 6: Final details
+- [ ] **Core API Refining:** Evaluate making internal modules private while maintaining the intentional openness required for upcoming CLI and WebAssembly integrations.
+- [ ] **Visuals:** Colored terminal output support.
+- [ ] **Documentation:** Finalize README and help messages.
