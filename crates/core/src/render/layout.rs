@@ -741,34 +741,48 @@ pub fn render_svg(flowchart: &Flowchart) -> Result<String> {
 
     max_w += 20; // smaller right padding instead of 150
 
-    let main_title_lines = flowchart.title.trim().split('\n').count();
-    let mut current_y = main_title_lines;
-    let mut total_h = main_title_lines;
+    let mut total_h = 0;
 
-    for (_, _, cy, _, _) in &engines {
-        total_h += cy + 10;
+    for (_, _, cy, title, is_sub) in &engines {
+        let display_title = if *is_sub {
+            format!("{}: {}", I18n::t_subroutine(flowchart.lang), title)
+        } else {
+            title.clone()
+        };
+        let title_lines = display_title.trim().split('\n').count();
+        // Convert pixel height of title (30px top margin + lines*25px) to grid units (20px per unit)
+        let title_units = ((30.0 + title_lines as f64 * 25.0) / 20.0).ceil() as usize;
+
+        total_h += title_units + cy + 4; // 4 units padding between charts
     }
 
     if !engines.is_empty() {
-        total_h -= 8; // Reduce the 10 padding to just 2 for the last element's bottom padding
+        total_h -= 2; // Reduce the 4 padding to just 2 for the last element's bottom padding
     }
 
     let mut renderer = crate::render::svg::SvgRenderer::new(max_w, total_h);
 
-    for (engine, _cx, cy, title, is_sub) in engines {
-        renderer.set_offset(0.0, current_y as f64);
+    let mut current_y = 0;
 
+    for (engine, _cx, cy, title, is_sub) in engines {
         let display_title = if is_sub {
             format!("{}: {}", I18n::t_subroutine(flowchart.lang), title)
         } else {
             title
         };
+
+        let title_lines = display_title.trim().split('\n').count();
+        let title_units = ((30.0 + title_lines as f64 * 25.0) / 20.0).ceil() as usize;
+
+        current_y += title_units;
+
+        renderer.set_offset(0.0, current_y as f64);
         renderer.add_title(&display_title);
 
         engine.draw_edges(&mut renderer)?;
         engine.draw_nodes(&mut renderer)?;
 
-        current_y += cy + 10;
+        current_y += cy + 4;
     }
 
     Ok(renderer.render())
