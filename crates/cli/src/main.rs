@@ -9,7 +9,9 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "c2flowch")]
 #[command(version, author, about)]
-#[command(long_about = "c2flowch (C to Flowchart)\nAuthor: Israel Alberto Roldan Vega\n\nc2flowch is a professional tool designed to convert C source code into clean, standards-compliant flowcharts (ANSI/ISO 5807). It features a multi-stage pipeline with an intermediate YAML representation, allowing for human-in-the-loop adjustments before final rendering in ASCII, SVG, or PNG formats.")]
+#[command(
+    long_about = "c2flowch (C to Flowchart)\nAuthor: Israel Alberto Roldan Vega\n\nc2flowch is a professional tool designed to convert C source code into clean, standards-compliant flowcharts (ANSI/ISO 5807). It features a multi-stage pipeline with an intermediate YAML representation, allowing for human-in-the-loop adjustments before final rendering in ASCII, SVG, or PNG formats."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
