@@ -3,6 +3,9 @@
 **c2flowch** converts C source code into flowcharts with the ANSI/ISO 5807
 symbols, as plain ASCII text, SVG or PNG.
 
+Try it in the browser, nothing to install:
+<https://airvzxf.github.io/c2flowch/>.
+
 ```c
 int main() {
   int n = 0;
@@ -174,6 +177,13 @@ Functions take and return the YAML text of a program, so it can be edited
 between the steps; errors are thrown as `Error`. The `web/` directory is a
 demo page: after `build-wasm.bash`, serve it with any static file server
 (`python3 -m http.server -d web`) and open it.
+
+The demo is deployed to GitHub Pages by the release workflow. To host it
+elsewhere, `scripts/cloudflare-build.bash` builds `web/` on a machine that
+only has `cc`, `curl` and `tar`: it downloads Rust, clang (wasi-sdk) and
+wasm-bindgen when they are missing. On Cloudflare Pages, connect the
+repository with the build command `bash scripts/cloudflare-build.bash`
+and the build output directory `web`.
 
 ## Development
 
