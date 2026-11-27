@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use anyhow::{Context, Result, anyhow};
 use c2flowch_core::{Language, ParseOptions, Program};
 use clap::{Parser, Subcommand, ValueEnum};

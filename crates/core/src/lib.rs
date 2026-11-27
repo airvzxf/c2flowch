@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! c2flowch: C source code -> ANSI/ISO 5807 flowcharts.
 //!
 //! The pipeline has three steps, each usable on its own:

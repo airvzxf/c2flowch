@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Levels of detail.
 //!
 //! | Level | Shows                                                           |
@@ -215,6 +216,9 @@ mod tests {
 
     #[test]
     fn grouping() {
-        assert_eq!(apply(sample(), 3)[0], Stmt::Process("x <- 0\ny <- 1".into()));
+        assert_eq!(
+            apply(sample(), 3)[0],
+            Stmt::Process("x <- 0\ny <- 1".into())
+        );
     }
 }

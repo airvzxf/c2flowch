@@ -3,12 +3,14 @@ name = "c2flowch-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Convert C source code into ANSI/ISO 5807 flowcharts (library)"
 
 [dependencies]
 anyhow.workspace = true
 serde.workspace = true
-serde_yaml.workspace = true
+serde_norway.workspace = true
 tree-sitter.workspace = true
 tree-sitter-c.workspace = true
 unicode-width.workspace = true

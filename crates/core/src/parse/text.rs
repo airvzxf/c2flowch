@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Turns C expressions (syntax tree nodes) into flowchart labels.
 //!
 //! The labels read as pseudocode: `=` becomes `<-`, `==` becomes `=`,

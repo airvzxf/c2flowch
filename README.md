@@ -145,3 +145,13 @@ line through a symbol, no label over a line, every jump routed).
 
 See [PROJECT.md](./PROJECT.md) for the design and the roadmap, and
 [CHANGELOG.md](./CHANGELOG.md) for the changes.
+
+## License
+
+c2flowch is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
+
+The IBM Plex Mono fonts in `resources/fonts` are distributed under the
+SIL Open Font License 1.1.

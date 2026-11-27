@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Text rendering with plain ASCII characters, so the output looks the
 //! same in every terminal, editor and font.
 

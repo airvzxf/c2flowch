@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Structured intermediate representation.
 //!
 //! The IR is a tree of statements that mirrors the control flow of the C
@@ -45,7 +46,7 @@ pub struct Function {
     /// instead of "Start: name(params)"/"Return".
     #[serde(default, skip_serializing_if = "is_false")]
     pub entry: bool,
-    #[serde(with = "serde_yaml::with::singleton_map_recursive")]
+    #[serde(with = "serde_norway::with::singleton_map_recursive")]
     pub body: Vec<Stmt>,
 }
 
@@ -121,11 +122,11 @@ fn is_false(b: &bool) -> bool {
 }
 
 impl Program {
-    pub fn to_yaml(&self) -> Result<String, serde_yaml::Error> {
-        serde_yaml::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, serde_norway::Error> {
+        serde_norway::to_string(self)
     }
 
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, serde_norway::Error> {
+        serde_norway::from_str(yaml)
     }
 }
