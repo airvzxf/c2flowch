@@ -3,25 +3,25 @@ source: crates/core/tests/samples.rs
 expression: render_ascii(&p)
 ---
       (  Start  )
-           │
-           🭭
-  *───────────────────*
- ╱   Print "debug"   ╱
-*──────────┬────────*
-           │
-           │
-           │
-           🭭
-          🯐🯓
-        🯐    🯓
-      🯐        🯓  True
-     🯝   true   🯟───┐
-      🯒        🯑    │
-        🯒    🯑      │
-          🯒🯑        │
-    False  │        │
-           ├🭮───────┘
-           │
-           │
-           🭭
+           |
+           v
+  *-------------------*
+ /   Print "debug"   /
+*----------+--------*
+           |
+           |
+           |
+           v
+          /\
+        /    \
+      /        \  True
+     <   true   >---+
+      \        /    |
+        \    /      |
+          \/        |
+    False  |        |
+           +<-------+
+           |
+           |
+           v
        (  End  )

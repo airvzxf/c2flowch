@@ -1,8 +1,8 @@
 //! Turns C expressions (syntax tree nodes) into flowchart labels.
 //!
-//! The labels read as pseudocode: `=` becomes `←`, `==` becomes `=`,
-//! `!=` becomes `≠`, pointer syntax (`*p`, `&x`, `p->f`) is dropped, casts
-//! are removed and `printf`/`scanf` become "Print …"/"Read …".
+//! The labels read as pseudocode: `=` becomes `<-`, `==` becomes `=`,
+//! `!=` becomes `!=`, pointer syntax (`*p`, `&x`, `p->f`) is dropped, casts
+//! are removed and `printf`/`scanf` become "Print ..."/"Read ...".
 
 use crate::i18n::Words;
 use tree_sitter::Node;
@@ -54,8 +54,8 @@ impl Text<'_> {
                 let arg = n.child_by_field_name("argument").map(|a| self.expr(a));
                 let op = n.child_by_field_name("operator").map(|o| self.raw(o));
                 match (arg, op.as_deref()) {
-                    (Some(a), Some("++")) => format!("{a} ← {a} + 1"),
-                    (Some(a), Some("--")) => format!("{a} ← {a} - 1"),
+                    (Some(a), Some("++")) => format!("{a} <- {a} + 1"),
+                    (Some(a), Some("--")) => format!("{a} <- {a} - 1"),
                     _ => self.raw(n),
                 }
             }
@@ -88,7 +88,7 @@ impl Text<'_> {
         let right = self.expr(r);
         let op = self.raw(op);
         if op == "=" {
-            return format!("{left} ← {right}");
+            return format!("{left} <- {right}");
         }
         let bin = op.trim_end_matches('=');
         let compound = matches!(
@@ -96,18 +96,18 @@ impl Text<'_> {
             "binary_expression" | "conditional_expression" | "assignment_expression"
         );
         if compound {
-            format!("{left} ← {left} {bin} ({right})")
+            format!("{left} <- {left} {bin} ({right})")
         } else {
-            format!("{left} ← {left} {bin} {right}")
+            format!("{left} <- {left} {bin} {right}")
         }
     }
 
     /// An expression in a true/false position. `strcmp(a, b)` alone means
-    /// "a and b differ", so it is shown as `a ≠ b`.
+    /// "a and b differ", so it is shown as `a != b`.
     fn boolean(&self, n: Node) -> String {
         match n.kind() {
             "call_expression" => match self.strcmp_args(n) {
-                Some((a, b)) => format!("{a} ≠ {b}"),
+                Some((a, b)) => format!("{a} != {b}"),
                 None => self.expr(n),
             },
             "parenthesized_expression" => match named_children(n)[..] {
@@ -248,7 +248,7 @@ impl Text<'_> {
         };
         let op = self.raw(op);
 
-        // strcmp(a, b) == 0  →  a = b, and the same for the other relations.
+        // strcmp(a, b) == 0  ->  a = b, and the same for the other relations.
         let zero = |x: Node| x.kind() == "number_literal" && self.raw(x) == "0";
         if let Some(rel) = relation(&op) {
             if zero(r)
@@ -317,7 +317,7 @@ impl Text<'_> {
         None
     }
 
-    /// `printf("x = %d\n", x)` → `"x = ", x`.
+    /// `printf("x = %d\n", x)` -> `"x = ", x`.
     fn format(&self, fmt: Node, args: &[Node]) -> String {
         let mut parts = Vec::new();
         let mut args = args.iter().map(|a| self.expr(*a));
@@ -377,9 +377,9 @@ impl Text<'_> {
 fn relation(op: &str) -> Option<&'static str> {
     Some(match op {
         "==" => "=",
-        "!=" => "≠",
-        "<=" => "≤",
-        ">=" => "≥",
+        "!=" => "!=",
+        "<=" => "<=",
+        ">=" => ">=",
         "<" => "<",
         ">" => ">",
         _ => return None,

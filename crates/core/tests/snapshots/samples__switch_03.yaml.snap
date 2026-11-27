@@ -9,7 +9,7 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: opcion ← 0
+  - process: opcion <- 0
   - switch:
       expr: opcion
       cases:

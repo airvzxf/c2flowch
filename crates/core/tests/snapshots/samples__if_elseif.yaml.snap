@@ -9,7 +9,7 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: i ← 0
+  - process: i <- 0
   - if:
       cond: i = 0
       then:

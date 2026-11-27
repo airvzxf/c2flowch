@@ -9,11 +9,11 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: i ← 0
+  - process: i <- 0
   - while:
       cond: i < 5
       body:
       - io: 'Print "While: ", i'
-      - process: i ← i + 1
+      - process: i <- i + 1
   - io: Print "Fin"
   - return: '0'

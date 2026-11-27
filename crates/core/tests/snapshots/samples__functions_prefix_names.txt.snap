@@ -2,24 +2,24 @@
 source: crates/core/tests/samples.rs
 expression: render_ascii(&p)
 ---
-        (  Start  )
-             │
-             🭭
-┌─┬─────────────────────┬─┐
-│ │   r ← checksum(5)   │ │
-└─┴──────────┬──────────┴─┘
-             │
-             🭭
-         (  End  )
+         (  Start  )
+              |
+              v
++-+-----------------------+-+
+| |   r <- checksum(5)    | |
++-+-----------+-----------+-+
+              |
+              v
+          (  End  )
 
 
 (  Start: checksum(x)  )
-            │
-            🭭
+            |
+            v
      (  Return: x  )
 
 
 (  Start: sum(a, b)  )
-           │
-           🭭
+           |
+           v
   (  Return: a + b  )

@@ -16,6 +16,10 @@ A rewrite of the parser, the intermediate representation and the layout.
   falling back to English.
 - Status messages go to standard error, so standard output carries only the
   drawing.
+- The text output and the labels use only ASCII characters, so they look
+  the same in every terminal, editor and font: lines are `-`, `|` and `+`,
+  arrowheads are `v ^ < >`, decisions are drawn with `/ \ < >`, and labels
+  write `<-`, `!=`, `<=` and `>=` instead of Unicode symbols.
 
 ### Fixed
 

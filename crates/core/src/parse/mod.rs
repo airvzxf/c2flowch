@@ -1,4 +1,4 @@
-//! C source → structured IR, using the tree-sitter C grammar.
+//! C source -> structured IR, using the tree-sitter C grammar.
 
 mod text;
 
@@ -454,7 +454,7 @@ impl Converter<'_> {
                         out.push(Stmt::Io(io));
                         continue;
                     }
-                    let label = format!("{name} ← {}", self.text.expr(value));
+                    let label = format!("{name} <- {}", self.text.expr(value));
                     out.push(if self.calls_known(value) {
                         Stmt::Call(label)
                     } else {
@@ -561,15 +561,15 @@ mod tests {
 
     #[test]
     fn assignments() {
-        assert_eq!(one("x = y * z;"), Stmt::Process("x ← y * z".into()));
-        assert_eq!(one("x += 2;"), Stmt::Process("x ← x + 2".into()));
-        assert_eq!(one("x *= a + b;"), Stmt::Process("x ← x * (a + b)".into()));
-        assert_eq!(one("i++;"), Stmt::Process("i ← i + 1".into()));
-        assert_eq!(one("--i;"), Stmt::Process("i ← i - 1".into()));
-        assert_eq!(one("a = b == 3;"), Stmt::Process("a ← b = 3".into()));
-        assert_eq!(one("arr[i++] = 0;"), Stmt::Process("arr[i++] ← 0".into()));
-        assert_eq!(one("p->next = *q;"), Stmt::Process("p.next ← q".into()));
-        assert_eq!(one("x = (float) y;"), Stmt::Process("x ← y".into()));
+        assert_eq!(one("x = y * z;"), Stmt::Process("x <- y * z".into()));
+        assert_eq!(one("x += 2;"), Stmt::Process("x <- x + 2".into()));
+        assert_eq!(one("x *= a + b;"), Stmt::Process("x <- x * (a + b)".into()));
+        assert_eq!(one("i++;"), Stmt::Process("i <- i + 1".into()));
+        assert_eq!(one("--i;"), Stmt::Process("i <- i - 1".into()));
+        assert_eq!(one("a = b == 3;"), Stmt::Process("a <- b = 3".into()));
+        assert_eq!(one("arr[i++] = 0;"), Stmt::Process("arr[i++] <- 0".into()));
+        assert_eq!(one("p->next = *q;"), Stmt::Process("p.next <- q".into()));
+        assert_eq!(one("x = (float) y;"), Stmt::Process("x <- y".into()));
     }
 
     #[test]
@@ -577,14 +577,14 @@ mod tests {
         assert_eq!(
             labels("int main() { int a = 1, b, *p = &a; }"),
             vec![
-                Stmt::Process("a ← 1".into()),
+                Stmt::Process("a <- 1".into()),
                 Stmt::Prep("int b".into()),
-                Stmt::Process("p ← a".into()),
+                Stmt::Process("p <- a".into()),
             ]
         );
         assert_eq!(
             one(r#"char *s = "int x = 5; printf(";"#),
-            Stmt::Process(r#"s ← "int x = 5; printf(""#.into())
+            Stmt::Process(r#"s <- "int x = 5; printf(""#.into())
         );
     }
 
@@ -610,12 +610,12 @@ mod tests {
             Stmt::If { cond, .. } => cond,
             s => panic!("{s:?}"),
         };
-        assert_eq!(cond("a == b && c != d"), "a = b and c ≠ d");
+        assert_eq!(cond("a == b && c != d"), "a = b and c != d");
         assert_eq!(cond("strcmp(s, \"x\") == 0"), "s = \"x\"");
         assert_eq!(cond("!strcmp(s, t)"), "s = t");
-        assert_eq!(cond("strcmp(s, t)"), "s ≠ t");
+        assert_eq!(cond("strcmp(s, t)"), "s != t");
         assert_eq!(cond("0 < strcmp(s, t)"), "s > t");
-        assert_eq!(cond("!(x <= 3)"), "not (x ≤ 3)");
+        assert_eq!(cond("!(x <= 3)"), "not (x <= 3)");
     }
 
     #[test]
@@ -636,7 +636,7 @@ mod tests {
         assert_eq!(names, ["main", "checksum", "sum"]);
         assert_eq!(
             p.program.functions[0].body[0],
-            Stmt::Call("r ← checksum(5)".into())
+            Stmt::Call("r <- checksum(5)".into())
         );
     }
 
@@ -646,15 +646,15 @@ mod tests {
             one("if (x > 2) x = 0; else y++;"),
             Stmt::If {
                 cond: "x > 2".into(),
-                then: vec![Stmt::Process("x ← 0".into())],
-                otherwise: vec![Stmt::Process("y ← y + 1".into())],
+                then: vec![Stmt::Process("x <- 0".into())],
+                otherwise: vec![Stmt::Process("y <- y + 1".into())],
             }
         );
         assert_eq!(
             one("while (x < 5) x++;"),
             Stmt::While {
                 cond: "x < 5".into(),
-                body: vec![Stmt::Process("x ← x + 1".into())],
+                body: vec![Stmt::Process("x <- x + 1".into())],
             }
         );
     }
@@ -678,7 +678,7 @@ mod tests {
             labels("int main() { again: x = x > 5 ? 0 : x + 1; if (x < 3) goto again; }"),
             vec![
                 Stmt::Label("again".into()),
-                Stmt::Process("x ← x > 5 ? 0 : x + 1".into()),
+                Stmt::Process("x <- x > 5 ? 0 : x + 1".into()),
                 Stmt::If {
                     cond: "x < 3".into(),
                     then: vec![Stmt::Goto("again".into())],

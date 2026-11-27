@@ -176,12 +176,12 @@ mod tests {
     fn sample() -> Vec<Stmt> {
         vec![
             Stmt::Prep("int x".into()),
-            Stmt::Process("x ← 0".into()),
-            Stmt::Process("y ← 1".into()),
+            Stmt::Process("x <- 0".into()),
+            Stmt::Process("y <- 1".into()),
             Stmt::Io("Print x".into()),
             Stmt::While {
                 cond: "x < 3".into(),
-                body: vec![Stmt::Process("x ← x + 1".into())],
+                body: vec![Stmt::Process("x <- x + 1".into())],
             },
             Stmt::If {
                 cond: "y".into(),
@@ -215,6 +215,6 @@ mod tests {
 
     #[test]
     fn grouping() {
-        assert_eq!(apply(sample(), 3)[0], Stmt::Process("x ← 0\ny ← 1".into()));
+        assert_eq!(apply(sample(), 3)[0], Stmt::Process("x <- 0\ny <- 1".into()));
     }
 }

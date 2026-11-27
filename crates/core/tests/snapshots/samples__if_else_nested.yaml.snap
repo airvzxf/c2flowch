@@ -9,12 +9,12 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: i ← 0
+  - process: i <- 0
   - if:
       cond: i = 0
       then:
       - io: 'Print "i: ", i'
-      - process: j ← 0
+      - process: j <- 0
       - if:
           cond: j = 0
           then:

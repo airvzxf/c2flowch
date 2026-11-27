@@ -8,7 +8,7 @@ functions:
 - name: main
   entry: true
   body:
-  - process: choice ← 0
+  - process: choice <- 0
   - do_while:
       body:
       - call: print_menu()
@@ -27,13 +27,13 @@ functions:
           - values:
             - '1'
             body:
-            - call: res ← add(x, y)
+            - call: res <- add(x, y)
             - io: 'Print "Result: ", res'
             - break
           - values:
             - '2'
             body:
-            - call: res ← subtract(x, y)
+            - call: res <- subtract(x, y)
             - io: 'Print "Result: ", res'
             - break
           - values:
@@ -44,7 +44,7 @@ functions:
           - default: true
             body:
             - io: Print "Invalid choice!"
-      cond: choice ≠ 3
+      cond: choice != 3
   - return: '0'
 - name: print_menu
   body:

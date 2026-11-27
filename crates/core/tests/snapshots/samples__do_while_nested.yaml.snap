@@ -9,19 +9,19 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: i ← 0
+  - process: i <- 0
   - do_while:
       body:
       - io: Print "Iterar i"
       - process: |-
-          i ← i + 1
-          j ← 0
+          i <- i + 1
+          j <- 0
       - do_while:
           body:
           - io: |-
               Print "Iterar j"
               Print "While: ", i, ", ", j
-          - process: j ← j + 1
+          - process: j <- j + 1
           cond: j < 5
       cond: i < 5
   - io: Print "Fin"

@@ -1,4 +1,4 @@
-//! Vector rendering. Every cell of the layout grid becomes `CW × CH`
+//! Vector rendering. Every cell of the layout grid becomes `CW x CH`
 //! pixels; lines run through the centers of their cells.
 
 use crate::layout::geom::{
@@ -14,7 +14,7 @@ const SECTION_GAP: f64 = 48.0;
 /// Half the height of terminators and case symbols, in rows.
 const ROUND_HALF: f64 = 0.75;
 
-/// IBM Plex Mono advances 0.6 em per character: 15 px × 0.6 = 9 px = CW.
+/// IBM Plex Mono advances 0.6 em per character: 15 px x 0.6 = 9 px = CW.
 const STYLE: &str = "text{font-family:'IBM Plex Mono',monospace;font-size:15px;fill:#1f2328}\
 .lbl{font-size:13px;fill:#57606a}\
 .title{font-family:sans-serif;font-size:20px;font-weight:bold}\

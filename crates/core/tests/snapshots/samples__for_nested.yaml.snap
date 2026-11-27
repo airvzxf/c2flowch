@@ -10,15 +10,15 @@ functions:
   body:
   - io: Print "Inicio"
   - for:
-      init: i ← 0
+      init: i <- 0
       cond: i < 3
-      update: i ← i + 1
+      update: i <- i + 1
       body:
       - io: Print "Iterar i"
       - for:
-          init: j ← 0
+          init: j <- 0
           cond: j < 3
-          update: j ← j + 1
+          update: j <- j + 1
           body:
           - io: |-
               Print "Iterar j"

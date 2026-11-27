@@ -15,17 +15,17 @@ Convert C source code into clean, readable ANSI/ISO 5807 flowcharts:
 ## Design (version 2)
 
 ```
-C source ──parse──▶ Program (IR, YAML) ──layout──▶ Diagram ──▶ text / SVG / PNG
+C source --parse--> Program (IR, YAML) --layout--> Diagram --> text / SVG / PNG
 ```
 
-1. **Parser** (`crates/core/src/parse`): tree-sitter C syntax tree →
+1. **Parser** (`crates/core/src/parse`): tree-sitter C syntax tree ->
    structured IR. Labels are built from the syntax tree (never by searching
    the source text), so strings, comments and names that contain other
    names cannot confuse it. Every statement kind is handled in any position
-   (inside braces or not, after a label…); anything unknown is drawn as
+   (inside braces or not, after a label...); anything unknown is drawn as
    plain text and reported, never dropped silently.
 2. **IR** (`crates/core/src/ir.rs`): a tree of statements (`process`, `io`,
-   `call`, `if`, `while`, `for`, `switch`, `break`, `goto`…) with the final
+   `call`, `if`, `while`, `for`, `switch`, `break`, `goto`...) with the final
    label of every symbol. It has no node ids, join nodes or layout hints, so
    editing it cannot break the drawing.
 3. **Levels of detail** (`crates/core/src/detail.rs`): filtering and grouping
@@ -64,6 +64,4 @@ The core library does no I/O, ready for a WebAssembly build.
 - [ ] **Global variables:** show them before the start of `main`.
 - [ ] **Multiple files:** follow calls into other `.c` files of a project.
 - [ ] **Long labels:** wrap long conditions instead of widening the diamond.
-- [ ] **Text output:** an option for plain ASCII arrows and diamonds, for
-      terminals whose font lacks the "Symbols for Legacy Computing" block.
 - [ ] **Colored terminal output.**

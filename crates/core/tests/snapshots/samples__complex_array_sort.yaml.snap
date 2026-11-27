@@ -9,8 +9,8 @@ functions:
   entry: true
   body:
   - process: |-
-      data ← {64, 34, 25, 12, 22, 11, 90}
-      n ← 7
+      data <- {64, 34, 25, 12, 22, 11, 90}
+      n <- 7
   - io: 'Print "Unsorted array: "'
   - call: print_array(data, n)
   - call: bubble_sort(data, n)
@@ -23,9 +23,9 @@ functions:
   - size
   body:
   - for:
-      init: i ← 0
+      init: i <- 0
       cond: i < size
-      update: i ← i + 1
+      update: i <- i + 1
       body:
       - io: Print arr[i], " "
   - io: Print ""
@@ -35,14 +35,14 @@ functions:
   - n
   body:
   - for:
-      init: i ← 0
+      init: i <- 0
       cond: i < n - 1
-      update: i ← i + 1
+      update: i <- i + 1
       body:
       - for:
-          init: j ← 0
+          init: j <- 0
           cond: j < n - i - 1
-          update: j ← j + 1
+          update: j <- j + 1
           body:
           - if:
               cond: arr[j] > arr[j + 1]
@@ -54,6 +54,6 @@ functions:
   - b
   body:
   - process: |-
-      temp ← a
-      a ← b
-      b ← temp
+      temp <- a
+      a <- b
+      b <- temp

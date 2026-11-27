@@ -9,16 +9,16 @@ functions:
   entry: true
   body:
   - io: Print "Inicio"
-  - process: i ← 0
+  - process: i <- 0
   - while:
       cond: i < 5
       body:
       - io: 'Print "While: ", i'
-      - process: i ← i + 1
+      - process: i <- i + 1
   - for:
-      init: i ← 0
+      init: i <- 0
       cond: i < 3
-      update: i ← i + 1
+      update: i <- i + 1
       body:
       - io: 'Print "For: ", i'
   - io: Print "Fin"

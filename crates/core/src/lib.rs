@@ -1,10 +1,10 @@
-//! c2flowch: C source code → ANSI/ISO 5807 flowcharts.
+//! c2flowch: C source code -> ANSI/ISO 5807 flowcharts.
 //!
 //! The pipeline has three steps, each usable on its own:
 //!
-//! 1. [`parse`]: C source → [`Program`], a structured IR that can be saved
+//! 1. [`parse`]: C source -> [`Program`], a structured IR that can be saved
 //!    as YAML and edited by hand;
-//! 2. [`layout`](layout::layout): [`Program`] → one
+//! 2. [`layout`](layout::layout): [`Program`] -> one
 //!    [`Diagram`](layout::geom::Diagram) per function;
 //! 3. [`render_ascii`] / [`render_svg`]: drawing.
 //!

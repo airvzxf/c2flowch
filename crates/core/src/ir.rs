@@ -13,12 +13,12 @@
 //! - name: main
 //!   entry: true
 //!   body:
-//!   - process: i ← 0
+//!   - process: i <- 0
 //!   - while:
 //!       cond: i < 5
 //!       body:
 //!       - io: Print i
-//!       - process: i ← i + 1
+//!       - process: i <- i + 1
 //!   - return: null
 //! ```
 

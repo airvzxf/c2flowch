@@ -9,7 +9,7 @@ functions:
   entry: true
   body:
   - call: greet()
-  - call: sum ← add(5, 7)
+  - call: sum <- add(5, 7)
   - io: 'Print "Sum: ", sum'
   - return: '0'
 - name: greet

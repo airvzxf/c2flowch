@@ -1,4 +1,4 @@
-//! Structured layout: IR → [`Diagram`].
+//! Structured layout: IR -> [`Diagram`].
 //!
 //! Every statement becomes a [`Block`]: a rectangle of cells whose flow
 //! enters at the top of column 0 and leaves at the bottom of column 0.
@@ -501,7 +501,7 @@ impl Layout {
         out
     }
 
-    /// `do … while`: join, body, condition, "True" back up on the right.
+    /// `do ... while`: join, body, condition, "True" back up on the right.
     fn do_block(&self, body: &[Stmt], cond: &str) -> Block {
         let (yes, no) = (self.words.yes, self.words.no);
         let ctx = Ctx { break_left: true };

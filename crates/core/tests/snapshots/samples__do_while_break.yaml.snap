@@ -8,10 +8,10 @@ functions:
 - name: main
   entry: true
   body:
-  - process: tries ← 0
+  - process: tries <- 0
   - do_while:
       body:
-      - process: tries ← tries + 1
+      - process: tries <- tries + 1
       - if:
           cond: tries > 3
           then:

@@ -9,10 +9,10 @@ functions:
   entry: true
   body:
   - process: |-
-      s ← "int x = 5; printf("
-      a ← 1
-      b ← 2
-      a ← b = 3
-      x ← y * z
-      arr[i++] ← 0
+      s <- "int x = 5; printf("
+      a <- 1
+      b <- 2
+      a <- b = 3
+      x <- y * z
+      arr[i++] <- 0
   - return: '0'

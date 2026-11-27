@@ -8,7 +8,7 @@ functions:
 - name: main
   entry: true
   body:
-  - call: r ← checksum(5)
+  - call: r <- checksum(5)
   - return: '0'
 - name: checksum
   params:

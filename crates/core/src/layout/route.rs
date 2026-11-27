@@ -3,7 +3,7 @@
 //!
 //! A jump is a line from the point where the jump happens to one of the
 //! cells where it may join its target (the exit line of a loop, the back
-//! edge, a label…). The search (A*) runs on the cell grid: symbols and
+//! edge, a label...). The search (A*) runs on the cell grid: symbols and
 //! labels are walls, a line may cross another straight line at a right
 //! angle, and every bend and crossing costs extra, so the shortest clean
 //! route wins.

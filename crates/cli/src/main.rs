@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 #[command(name = "c2flowch", version, author, about)]
 #[command(long_about = "c2flowch (C to Flowchart)\n\n\
 Converts C source code into flowcharts with ANSI/ISO 5807 symbols, in two steps:\n\n\
-  1. parse:  C source → YAML (a structured description you can edit by hand)\n  \
-2. render: YAML → text, SVG or PNG")]
+  1. parse:  C source -> YAML (a structured description you can edit by hand)\n\
+2. render: YAML -> text, SVG or PNG")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -46,7 +46,7 @@ enum Commands {
     /// Parse C code into the YAML description of its flowcharts
     ///
     /// The YAML holds one flowchart per function, as a tree of statements
-    /// (process, io, call, if, while, for, switch…). Every text is the
+    /// (process, io, call, if, while, for, switch...). Every text is the
     /// label printed in the symbol, so you can edit it before rendering.
     Parse {
         /// The C source file
@@ -63,7 +63,7 @@ enum Commands {
         /// 5: every statement in its own symbol (nothing is grouped)
         #[arg(short, long, default_value_t = 3, value_parser = clap::value_parser!(u8).range(1..=5), verbatim_doc_comment)]
         level: u8,
-        /// Language of the labels (Start, End, Print, True…)
+        /// Language of the labels (Start, End, Print, True...)
         #[arg(long, value_enum, default_value_t = Lang::En)]
         lang: Lang,
     },
@@ -165,7 +165,7 @@ fn render(input: &Path, output: Option<&Path>, format: Format, split: bool) -> R
     Ok(())
 }
 
-/// `out/flow.svg` + `sum` → `out/flow-sum.svg`.
+/// `out/flow.svg` + `sum` -> `out/flow-sum.svg`.
 fn suffixed(path: &Path, suffix: &str) -> PathBuf {
     let safe: String = suffix
         .chars()

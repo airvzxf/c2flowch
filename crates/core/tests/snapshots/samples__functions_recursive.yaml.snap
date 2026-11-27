@@ -8,8 +8,8 @@ functions:
 - name: main
   entry: true
   body:
-  - process: num ← 5
-  - call: result ← factorial(num)
+  - process: num <- 5
+  - call: result <- factorial(num)
   - io: Print "Factorial of ", num, " is ", result
   - return: '0'
 - name: factorial
@@ -17,7 +17,7 @@ functions:
   - n
   body:
   - if:
-      cond: n ≤ 1
+      cond: n <= 1
       then:
       - return: '1'
   - return: n * factorial(n - 1)

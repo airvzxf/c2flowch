@@ -166,7 +166,7 @@ impl Shape {
     }
 
     /// Whether the bottom row is a border line that a flow line can leave
-    /// from (drawn as `┬`).
+    /// from (drawn as `+`).
     pub fn has_bottom_border(&self) -> bool {
         matches!(
             self.kind,

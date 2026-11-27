@@ -1,7 +1,7 @@
 # c2flowch: C to flowchart (ANSI/ISO 5807)
 
 **c2flowch** converts C source code into flowcharts with the ANSI/ISO 5807
-symbols, as text (Unicode box drawing), SVG or PNG.
+symbols, as plain ASCII text, SVG or PNG.
 
 ```c
 int main() {
@@ -27,8 +27,8 @@ int main() {
 The conversion has two steps, with a YAML file in between that you can edit
 by hand:
 
-1. `parse`: C source → YAML, one flowchart per function;
-2. `render`: YAML → text, SVG or PNG.
+1. `parse`: C source -> YAML, one flowchart per function;
+2. `render`: YAML -> text, SVG or PNG.
 
 The YAML is a tree of statements that follows the structure of the code.
 Every text is the label printed in its symbol:
@@ -40,7 +40,7 @@ functions:
 - name: main
   entry: true
   body:
-  - process: n ← 0
+  - process: n <- 0
   - while:
       cond: '1'
       body:
@@ -75,10 +75,10 @@ Without a trailing `break`, it falls through into the next case, as in C.
 ## Usage
 
 ```bash
-# 1. C → YAML (writes main.yaml)
+# 1. C -> YAML (writes main.yaml)
 c2flowch parse main.c --lang es --level 3
 
-# 2. YAML → drawing
+# 2. YAML -> drawing
 c2flowch render main.yaml                          # text, to the terminal
 c2flowch render main.yaml -f svg -o main.svg
 c2flowch render main.yaml -f png -o main.png
@@ -105,12 +105,12 @@ label, or a `break`/`continue` outside of a loop.
 
 | C                              | Label                    |
 |--------------------------------|--------------------------|
-| `x = y + 1;`                   | `x ← y + 1`              |
-| `x += a * b;` / `i++;`         | `x ← x + (a * b)` / `i ← i + 1` |
-| `a == b`, `a != b`, `a <= b`   | `a = b`, `a ≠ b`, `a ≤ b` |
+| `x = y + 1;`                   | `x <- y + 1`              |
+| `x += a * b;` / `i++;`         | `x <- x + (a * b)` / `i <- i + 1` |
+| `a == b`, `a != b`, `a <= b`   | `a = b`, `a != b`, `a <= b` |
 | `a && !b`                      | `a and not b`            |
 | `strcmp(s, t) == 0`            | `s = t`                  |
-| `p->next = *q;`                | `p.next ← q`             |
+| `p->next = *q;`                | `p.next <- q`             |
 | `printf("x = %d\n", x);`       | `Print "x = ", x`        |
 | `scanf("%d", &n);`             | `Read n`                 |
 

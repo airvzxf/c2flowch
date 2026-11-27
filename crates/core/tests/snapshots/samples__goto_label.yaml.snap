@@ -8,9 +8,9 @@ functions:
 - name: main
   entry: true
   body:
-  - process: x ← 0
+  - process: x <- 0
   - label: again
-  - process: 'x ← x > 5 ? 0 : x + 1'
+  - process: 'x <- x > 5 ? 0 : x + 1'
   - if:
       cond: x < 3
       then:
