@@ -72,6 +72,41 @@ fn parse_then_render_every_format() {
 }
 
 #[test]
+fn color_follows_the_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    let c = dir.path().join("prog.c");
+    fs::write(&c, CODE).unwrap();
+    cmd()
+        .args(["parse", c.to_str().unwrap()])
+        .assert()
+        .success();
+    let yaml = dir.path().join("prog.yaml");
+    let yaml = yaml.to_str().unwrap();
+    let out = |args: &[&str]| {
+        let o = cmd().arg("render").arg(yaml).args(args).output().unwrap();
+        assert!(o.status.success());
+        String::from_utf8(o.stdout).unwrap()
+    };
+    // Standard output is a pipe here, so `auto` does not color.
+    let plain = out(&[]);
+    assert!(!plain.contains('\x1b'), "{plain}");
+    assert_eq!(out(&["--color", "never"]), plain);
+    let color = out(&["--color", "always"]);
+    assert!(color.contains("\x1b[32m("), "{color}");
+    // NO_COLOR only changes `auto`.
+    let o = cmd()
+        .env("NO_COLOR", "1")
+        .args(["render", yaml, "--color", "always"])
+        .output()
+        .unwrap();
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), color);
+    cmd()
+        .args(["render", yaml, "--color", "sometimes"])
+        .assert()
+        .failure();
+}
+
+#[test]
 fn split_writes_one_file_per_function() {
     let dir = tempfile::tempdir().unwrap();
     let c = dir.path().join("prog.c");

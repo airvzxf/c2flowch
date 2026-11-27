@@ -92,6 +92,7 @@ c2flowch parse main.c --lang es --level 3
 
 # 2. YAML -> drawing
 c2flowch render main.yaml                          # text, to the terminal
+c2flowch render main.yaml --color always | less -R # text with ANSI colors
 c2flowch render main.yaml -f svg -o main.svg
 c2flowch render main.yaml -f png -o main.png
 c2flowch render main.yaml -f svg -o main.svg -s    # one file per function

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Text rendering with plain ASCII characters, so the output looks the
-//! same in every terminal, editor and font.
+//! same in every terminal, editor and font. Color is optional: when it is
+//! on, ANSI escapes paint each symbol by its kind and nothing else changes.
 
 use crate::layout::geom::{
     DECISION_MID, DOWN, Diagram, Dir, LEFT, PAD, Pt, RIGHT, Shape, ShapeKind, UP, width,
@@ -19,11 +20,44 @@ enum Cell {
     Border(u8),
 }
 
+/// What a cell belongs to, which picks its color.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Ink {
+    /// Text inside symbols, flow lines and empty space.
+    Plain,
+    /// The outline of a symbol.
+    Outline(ShapeKind),
+    /// Arrow heads.
+    Arrow,
+    /// Branch labels (True, False, case values).
+    Label,
+}
+
+impl Ink {
+    /// The ANSI SGR parameters of this ink, or `None` for the default.
+    fn sgr(self) -> Option<&'static str> {
+        Some(match self {
+            Ink::Plain => return None,
+            Ink::Outline(ShapeKind::Terminator | ShapeKind::Case) => "32",
+            Ink::Outline(ShapeKind::Process) => "34",
+            Ink::Outline(ShapeKind::Call) => "36",
+            Ink::Outline(ShapeKind::Io) => "35",
+            Ink::Outline(ShapeKind::Prep) => "31",
+            Ink::Outline(ShapeKind::Decision) => "33",
+            Ink::Arrow => "1",
+            Ink::Label => "1;33",
+        })
+    }
+}
+
 struct Canvas {
     x0: i32,
     y0: i32,
     w: usize,
     cells: Vec<Cell>,
+    inks: Vec<Ink>,
+    /// The ink of the cells written from now on.
+    pen: Ink,
 }
 
 impl Canvas {
@@ -35,6 +69,8 @@ impl Canvas {
             y0: d.min.1,
             w,
             cells: vec![Cell::Empty; w * h],
+            inks: vec![Ink::Plain; w * h],
+            pen: Ink::Plain,
         }
     }
 
@@ -47,6 +83,7 @@ impl Canvas {
     fn set(&mut self, p: Pt, c: Cell) {
         if let Some(i) = self.idx(p) {
             self.cells[i] = c;
+            self.inks[i] = self.pen;
         }
     }
 
@@ -54,7 +91,14 @@ impl Canvas {
         self.set((x, y), Cell::Char(c));
     }
 
+    /// Writes text with the plain ink, whatever the pen holds.
     fn text(&mut self, x: i32, y: i32, s: &str) {
+        let pen = std::mem::replace(&mut self.pen, Ink::Plain);
+        self.write(x, y, s);
+        self.pen = pen;
+    }
+
+    fn write(&mut self, x: i32, y: i32, s: &str) {
         let mut x = x;
         for c in s.chars() {
             let cw = i32::try_from(c.width().unwrap_or(0)).unwrap_or(0);
@@ -76,6 +120,12 @@ impl Canvas {
     }
 
     fn shape(&mut self, s: &Shape) {
+        self.pen = Ink::Outline(s.kind);
+        self.shape_cells(s);
+        self.pen = Ink::Plain;
+    }
+
+    fn shape_cells(&mut self, s: &Shape) {
         let (x, y, r, b) = (s.x, s.y, s.right(), s.bottom());
         let border = |c: &mut Canvas, x0: i32, x1: i32, y: i32| {
             for x in x0..=x1 {
@@ -187,21 +237,49 @@ impl Canvas {
         }
     }
 
-    fn render(&self) -> String {
+    fn render(&self, color: bool) -> String {
+        let w = self.w.max(1);
         let mut rows: Vec<String> = self
             .cells
-            .chunks(self.w.max(1))
-            .map(|row| {
+            .chunks(w)
+            .zip(self.inks.chunks(w))
+            .map(|(row, inks)| {
+                let chars: Vec<(char, Ink)> = row
+                    .iter()
+                    .zip(inks)
+                    .filter_map(|(c, &ink)| match c {
+                        Cell::Empty => Some((' ', ink)),
+                        Cell::Char(ch) => Some((*ch, ink)),
+                        Cell::Wide => None,
+                        Cell::Border(m) => Some((line_char(*m), ink)),
+                    })
+                    .collect();
+                let end = chars
+                    .iter()
+                    .rposition(|(c, _)| *c != ' ')
+                    .map_or(0, |i| i + 1);
                 let mut s = String::new();
-                for c in row {
-                    match c {
-                        Cell::Empty => s.push(' '),
-                        Cell::Char(ch) => s.push(*ch),
-                        Cell::Wide => {}
-                        Cell::Border(m) => s.push(line_char(*m)),
+                let mut cur = Ink::Plain;
+                for &(ch, ink) in &chars[..end] {
+                    // Spaces keep the current ink, so escapes only wrap
+                    // visible characters.
+                    if color && ch != ' ' && ink != cur {
+                        if cur != Ink::Plain {
+                            s.push_str("\x1b[0m");
+                        }
+                        if let Some(sgr) = ink.sgr() {
+                            s.push_str("\x1b[");
+                            s.push_str(sgr);
+                            s.push('m');
+                        }
+                        cur = ink;
                     }
+                    s.push(ch);
                 }
-                s.trim_end().to_string()
+                if cur != Ink::Plain {
+                    s.push_str("\x1b[0m");
+                }
+                s
             })
             .collect();
         while rows.last().is_some_and(String::is_empty) {
@@ -240,8 +318,8 @@ fn arrow_char(d: Dir) -> char {
     }
 }
 
-/// Draws one diagram as text.
-pub fn render(d: &Diagram) -> String {
+/// Draws one diagram as text; `color` adds ANSI escapes.
+pub fn render(d: &Diagram, color: bool) -> String {
     let mut c = Canvas::new(d);
     for s in &d.shapes {
         c.shape(s);
@@ -257,7 +335,10 @@ pub fn render(d: &Diagram) -> String {
         let Some(i) = c.idx(p) else { continue };
         c.cells[i] = match c.cells[i] {
             Cell::Border(b) => Cell::Border(b | m),
-            Cell::Empty => Cell::Border(m),
+            Cell::Empty => {
+                c.inks[i] = Ink::Plain;
+                Cell::Border(m)
+            }
             other => other,
         };
     }
@@ -266,11 +347,13 @@ pub fn render(d: &Diagram) -> String {
     for &p in crossings.keys() {
         c.set(p, Cell::Char('|'));
     }
+    c.pen = Ink::Arrow;
     for (&p, &dir) in &arrows {
         c.set(p, Cell::Char(arrow_char(dir)));
     }
+    c.pen = Ink::Label;
     for l in &d.labels {
-        c.text(l.x, l.y, &l.text);
+        c.write(l.x, l.y, &l.text);
     }
-    c.render()
+    c.render(color)
 }

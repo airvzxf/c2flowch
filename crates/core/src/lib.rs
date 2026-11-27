@@ -26,9 +26,20 @@ use std::collections::HashSet;
 
 /// Draws every function of a program as text, one below the other.
 pub fn render_ascii(program: &Program) -> String {
+    ascii(program, false)
+}
+
+/// Like [`render_ascii`], with ANSI color escapes for a terminal: each
+/// symbol outline gets the color of its kind, arrows and branch labels
+/// are bold. Removing the escapes gives back the plain text exactly.
+pub fn render_ascii_color(program: &Program) -> String {
+    ascii(program, true)
+}
+
+fn ascii(program: &Program, color: bool) -> String {
     let mut out: Vec<String> = layout::layout(program)
         .iter()
-        .map(render::ascii::render)
+        .map(|d| render::ascii::render(d, color))
         .collect();
     out.retain(|s| !s.is_empty());
     let mut s = out.join("\n\n\n");
