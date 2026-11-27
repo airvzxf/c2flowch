@@ -4,3 +4,5 @@ resources/yaml*
 resources/svg*
 resources/png*
 resources/c/*.y*ml
+web/pkg/
+web/examples/

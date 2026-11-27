@@ -1,0 +1,63 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>c2flowch: C to flowchart</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>c2flowch</h1>
+    <p>C source code to ANSI/ISO 5807 flowcharts, in your browser. Nothing is
+      uploaded: the code runs here as WebAssembly.
+      <a href="https://github.com/airvzxf/c2flowch">Source</a>
+      <span id="version"></span></p>
+  </header>
+
+  <main>
+    <section class="pane">
+      <div class="bar">
+        <label>Example
+          <select id="example"></select>
+        </label>
+        <label>Detail
+          <select id="level">
+            <option value="1">1: calls only</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5: every statement</option>
+          </select>
+        </label>
+        <label>Language
+          <select id="lang">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
+      </div>
+      <textarea id="code" spellcheck="false" aria-label="C source code"></textarea>
+      <ul id="warnings"></ul>
+    </section>
+
+    <section class="pane">
+      <div class="bar" role="tablist">
+        <button role="tab" data-view="svg" aria-selected="true">SVG</button>
+        <button role="tab" data-view="ascii" aria-selected="false">Text</button>
+        <button role="tab" data-view="yaml" aria-selected="false">YAML</button>
+        <span class="spacer"></span>
+        <button id="download">Download</button>
+      </div>
+      <div id="view-svg" class="view"></div>
+      <pre id="view-ascii" class="view" hidden></pre>
+      <textarea id="view-yaml" class="view" spellcheck="false" hidden
+        aria-label="Program as YAML (editable)"></textarea>
+      <p id="error" role="alert" hidden></p>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

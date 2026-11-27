@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Builds the c2flowch binary for each platform and attaches the archives
-# to the GitHub release. Runs when a release is published, or by hand for
+# Builds the c2flowch binary for each platform and the WebAssembly
+# package, attaches the archives to the GitHub release and deploys the
+# browser demo (web/) to GitHub Pages when enabled (see the pages job). Runs when a release is published, or by hand for
 # an existing tag.
 name: Release
 
@@ -77,3 +78,58 @@ jobs:
           shopt -s nullglob
           files=(dist/*.zip dist/*.zip.sha256 dist/*.tar.gz dist/*.tar.gz.sha256)
           gh release upload "${TAG}" "${files[@]}" --clobber
+
+  wasm:
+    name: WebAssembly package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm
+      - name: Install wasm-bindgen-cli
+        run: |
+          v=$(cargo metadata --format-version 1 --locked |
+            jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+          wasm-bindgen --version 2>/dev/null | grep -qx "wasm-bindgen ${v}" ||
+            cargo install wasm-bindgen-cli --version "${v}" --locked
+      - name: Build
+        run: scripts/build-wasm.bash web web/pkg
+      - name: Package
+        run: |
+          name="c2flowch-wasm-${TAG}"
+          mkdir -p "dist/${name}"
+          cp web/pkg/* README.md LICENSE CHANGELOG.md "dist/${name}/"
+          cd dist
+          tar -czf "${name}.tar.gz" "${name}"
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${TAG}" dist/*.tar.gz dist/*.tar.gz.sha256 --clobber
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web
+
+  # Needs GitHub Pages set to "GitHub Actions" in the repository settings,
+  # the github-pages environment allowed to deploy from v* tags, and the
+  # repository variable DEPLOY_PAGES set to true.
+  pages:
+    name: Deploy the demo to GitHub Pages
+    needs: wasm
+    if: vars.DEPLOY_PAGES == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

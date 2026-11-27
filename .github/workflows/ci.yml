@@ -42,3 +42,25 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --locked
+
+  wasm:
+    name: WebAssembly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm
+      - name: Install wasm-bindgen-cli
+        run: |
+          v=$(cargo metadata --format-version 1 --locked |
+            jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+          wasm-bindgen --version 2>/dev/null | grep -qx "wasm-bindgen ${v}" ||
+            cargo install wasm-bindgen-cli --version "${v}" --locked
+      - run: cargo build --locked -p c2flowch
+      - run: scripts/build-wasm.bash nodejs target/wasm-node
+      - run: node scripts/wasm-smoke.mjs target/wasm-node target/debug/c2flowch
+      - run: scripts/build-wasm.bash web web/pkg

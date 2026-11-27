@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.5.0
+
+### Added
+
+- WebAssembly: the new `c2flowch-wasm` crate exposes `parse`,
+  `parseFiles`, `render` (ASCII or SVG), `validate` and `version` to
+  JavaScript through wasm-bindgen. They work on the YAML text of a
+  program, like the command line. `scripts/build-wasm.bash` builds the
+  package for the web, Node.js or bundlers, and every release attaches
+  `c2flowch-wasm-vX.Y.Z.tar.gz`.
+- A browser demo in `web/`: type C code, choose the level of detail and
+  the language, see the flowchart as SVG or text, edit the YAML, and
+  download the result. Everything runs in the browser.
+- CI builds the WebAssembly package and checks that it draws every
+  sample in `resources/c` exactly like the command line.
+
+### Changed
+
+- tree-sitter-c 0.24.2, which builds for `wasm32-unknown-unknown`.
+
 ## 2.4.0
 
 ### Added

@@ -2,11 +2,12 @@
 members = [
     "crates/core",
     "crates/cli",
+    "crates/wasm",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "2.4.0"
+version = "2.5.0"
 authors = ["Israel Alberto Roldan Vega"]
 edition = "2024"
 license = "AGPL-3.0-or-later"
@@ -18,7 +19,7 @@ clap = { version = "4.5.60", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_norway = "0.9.42"
 tree-sitter = "0.26.6"
-tree-sitter-c = "0.24.1"
+tree-sitter-c = "0.24.2"
 unicode-width = "0.2.2"
 assert_cmd = "2.1.2"
 tempfile = "3.26.0"
