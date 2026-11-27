@@ -179,9 +179,10 @@ impl Canvas {
                     self.put(l, row, '\\');
                     self.put(rr, row, '/');
                 }
-                let text = s.lines.join(" ");
-                let inner = s.w - 2;
-                self.text(x + 1 + (inner - width(&text)) / 2, y + DECISION_MID, &text);
+                for (j, line) in s.lines.iter().enumerate() {
+                    let tx = x + 1 + (s.w - 2 - width(line)) / 2;
+                    self.text(tx, y + s.text_row(j), line);
+                }
             }
         }
     }

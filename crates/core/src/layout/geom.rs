@@ -107,6 +107,9 @@ pub const PAD: i32 = 3;
 /// Rows of a decision symbol, and the row of its side corners.
 pub const DECISION_H: i32 = 7;
 pub const DECISION_MID: i32 = 3;
+/// Widest condition, in cells, that a decision shows on one line. Longer
+/// conditions wrap onto the rows above and below the middle one.
+pub const DECISION_LINE_MAX: i32 = 30;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shape {
@@ -135,8 +138,15 @@ impl Shape {
             ShapeKind::Terminator => (tw + 6, n),
             ShapeKind::Case => (tw + 4, 1),
             ShapeKind::Decision => {
-                let k = ((tw + 6 + 5) / 6).max(2);
-                (6 * k, DECISION_H)
+                let (k, wrapped) = decision_text(&lines.join(" "));
+                return Shape {
+                    kind,
+                    x: -(3 * k),
+                    y: 0,
+                    w: 6 * k,
+                    h: DECISION_H,
+                    lines: wrapped,
+                };
             }
         };
         Shape {
@@ -146,6 +156,17 @@ impl Shape {
             w,
             h,
             lines,
+        }
+    }
+
+    /// Row of the `j`-th text line, relative to the top of the symbol.
+    pub fn text_row(&self, j: usize) -> i32 {
+        let j = i32::try_from(j).unwrap_or(i32::MAX);
+        match self.kind {
+            ShapeKind::Decision if self.lines.len() > 1 => DECISION_MID - 1 + j,
+            ShapeKind::Decision => DECISION_MID,
+            ShapeKind::Terminator | ShapeKind::Case => j,
+            _ => 1 + j,
         }
     }
 
@@ -174,6 +195,60 @@ impl Shape {
             ShapeKind::Process | ShapeKind::Call | ShapeKind::Io | ShapeKind::Prep
         )
     }
+}
+
+/// Size factor `k` (the diamond is `6 * k` cells wide) and the text lines
+/// of a decision.
+///
+/// A short condition stays on the middle row. A longer one is split at
+/// spaces into up to three lines: the middle row holds `6k - 10` cells and
+/// the rows above and below it, where the diamond is narrower, `4k - 6`.
+/// The margins keep the text clear of the slanted sides in the SVG drawing.
+/// The smallest `k` that fits wins.
+fn decision_text(text: &str) -> (i32, Vec<String>) {
+    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let tw = width(&text);
+    let one = ((tw + 6 + 5) / 6).max(2);
+    if tw <= DECISION_LINE_MAX || !text.contains(' ') {
+        return (one, vec![text]);
+    }
+    let words: Vec<&str> = text.split(' ').collect();
+    for k in 2..one {
+        if let Some(lines) = fill(&words, &[4 * k - 6, 6 * k - 10, 4 * k - 6]) {
+            return (k, lines);
+        }
+    }
+    (one, vec![text])
+}
+
+/// Greedy word wrap into lines of the given widths; `None` if the words do
+/// not fit.
+fn fill(words: &[&str], widths: &[i32]) -> Option<Vec<String>> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    let mut slot = 0;
+    for w in words {
+        let next = if cur.is_empty() {
+            (*w).to_string()
+        } else {
+            format!("{cur} {w}")
+        };
+        if width(&next) <= *widths.get(slot)? {
+            cur = next;
+            continue;
+        }
+        if cur.is_empty() {
+            return None;
+        }
+        lines.push(std::mem::take(&mut cur));
+        slot += 1;
+        if width(w) > *widths.get(slot)? {
+            return None;
+        }
+        cur = (*w).to_string();
+    }
+    lines.push(cur);
+    Some(lines)
 }
 
 /// How a flow line ends.

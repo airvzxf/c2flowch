@@ -1,0 +1,57 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+                                  (  Start  )
+                                       |
+                                       v
+                           +-----------------------+
+                           |   temperature <- 21   |
+                           |   humidity <- 40      |
+                           |   pressure <- 1013    |
+                           +-----------+-----------+
+                                       |
+                                       v
+                                      /\
+                               /              \
+                        /    temperature > 18 and    \       True
+                  <    temperature < 26 and humidity >=    >-------------------+
+                        \   30 and humidity <= 60    /                         |
+                               \              /                                v
+                                      \/                           *-------------------------*
+                                False  |                          /   Print "comfortable"   /
+                                       |                         *-------------+-----------*
+                                       |                                       |
+                                       +<--------------------------------------+
+                                       |
+                                       +<---------------------------------------------------------+
+                                       |                                                          |
+                                       v                                                          |
+                                      /\                                                          |
+                               /              \                                                   |
+                        /    pressure > 1000 and     \       True                                 |
+                  <    pressure < 1030 and temperature     >-------------------+                  |
+                        \   != 0 or humidity = 100   /                         |                  |
+                               \              /                                v                  |
+                                      \/                       +-------------------------------+  |
+                                False  |                       |   pressure <- pressure - 1    |  |
+                                       |                       +---------------+---------------+  |
+                                       |                                       |                  |
+                                       |                                       +------------------+
+                                       |
+                                       |
+                                       v
+                                      /\
+                         /                          \
+            /                                                    \             True
+<    pressure_sensor_is_calibrated_and_ready_for_a_new_measurement_cycle     >----------------+
+            \                                                    /                            |
+                         \                          /                                         v
+                                      \/                                             *-------------------*
+                                False  |                                            /   Print "ready"   /
+                                       |                                           *----------+--------*
+                                       |                                                      |
+                                       +<-----------------------------------------------------+
+                                       |
+                                       v
+                                   (  End  )

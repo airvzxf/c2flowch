@@ -19,7 +19,7 @@ struct Cli {
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 enum Format {
-    /// Unicode box-drawing characters
+    /// Plain ASCII characters
     Ascii,
     /// Vector image
     Svg,
