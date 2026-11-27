@@ -37,11 +37,17 @@ pub fn layout(program: &Program) -> Vec<Diagram> {
         .functions
         .iter()
         .map(|f| {
-            Layout {
+            let layout = Layout {
                 words,
                 entry: f.entry,
+            };
+            if f.entry && !program.globals.is_empty() {
+                let mut f = f.clone();
+                f.body.splice(0..0, program.globals.iter().cloned());
+                layout.function(&f)
+            } else {
+                layout.function(f)
             }
-            .function(f)
         })
         .collect()
 }

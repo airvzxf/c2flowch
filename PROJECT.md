@@ -61,6 +61,5 @@ The core library does no I/O, ready for a WebAssembly build.
 
 - [ ] **WebAssembly:** a `c2flowch-wasm` crate exposing parse and render to
       the browser.
-- [ ] **Global variables:** show them before the start of `main`.
 - [ ] **Multiple files:** follow calls into other `.c` files of a project.
 - [ ] **Colored terminal output.**
