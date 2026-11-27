@@ -63,5 +63,4 @@ The core library does no I/O, ready for a WebAssembly build.
       the browser.
 - [ ] **Global variables:** show them before the start of `main`.
 - [ ] **Multiple files:** follow calls into other `.c` files of a project.
-- [ ] **Long labels:** wrap long conditions instead of widening the diamond.
 - [ ] **Colored terminal output.**

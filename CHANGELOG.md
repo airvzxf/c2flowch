@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.1.0
+
+### Added
+
+- Long conditions wrap: a decision whose condition is wider than 30
+  cells splits it at spaces into up to three lines, on the middle row and
+  the rows above and below it, instead of growing one very wide diamond.
+  Text and SVG output both wrap the same way; a condition without spaces
+  stays on one line.
+
+### Fixed
+
+- `render --help` described the text format as Unicode box drawing; it is
+  plain ASCII since 2.0.0.
+
 ## 2.0.1
 
 ### Changed

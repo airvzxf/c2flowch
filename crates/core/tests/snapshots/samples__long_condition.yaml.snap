@@ -1,0 +1,27 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: long_condition.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: |-
+      temperature <- 21
+      humidity <- 40
+      pressure <- 1013
+  - if:
+      cond: temperature > 18 and temperature < 26 and humidity >= 30 and humidity <= 60
+      then:
+      - io: Print "comfortable"
+  - while:
+      cond: pressure > 1000 and pressure < 1030 and temperature != 0 or humidity = 100
+      body:
+      - process: pressure <- pressure - 1
+  - if:
+      cond: pressure_sensor_is_calibrated_and_ready_for_a_new_measurement_cycle
+      then:
+      - io: Print "ready"
+  - return: '0'

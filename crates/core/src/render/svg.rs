@@ -147,9 +147,10 @@ fn shape(out: &mut String, f: &Frame, s: &Shape) {
     let left_of = |cell: i32| f.x(cell) - CW / 2.0;
     match s.kind {
         ShapeKind::Decision => {
-            let line = s.lines.join(" ");
-            let x = s.x + 1 + (s.w - 2 - width(&line)) / 2;
-            text(out, left_of(x), f.y(s.y + DECISION_MID), &line, None);
+            for (j, line) in s.lines.iter().enumerate() {
+                let x = s.x + 1 + (s.w - 2 - width(line)) / 2;
+                text(out, left_of(x), f.y(s.y + s.text_row(j)), line, None);
+            }
         }
         ShapeKind::Terminator | ShapeKind::Case => {
             for (j, line) in s.lines.iter().enumerate() {
