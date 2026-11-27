@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.4.0
+
+### Added
+
+- Multiple files: `parse main.c list.c util.c` reads several C files of
+  one program into a single YAML. A call to a function defined in any
+  of the files is a call symbol, every function gets its own flowchart
+  (`main` first, then what it calls, then the rest in file order), and
+  the global variables of every file are drawn in `main`. Warnings name
+  the file they belong to. When two files define a function with the
+  same name, the first one is kept, with a warning. The YAML goes next
+  to the first file unless `-o` is given; its title lists the files.
+  The library adds `parse_files` and `Source`, and `Warning` gains a
+  `file` field.
+
+### Changed
+
+- `extern` variable declarations are no longer drawn as globals: they
+  only refer to a variable defined elsewhere.
+
 ## 2.3.0
 
 ### Added

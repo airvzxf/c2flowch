@@ -20,7 +20,7 @@ pub mod render;
 
 pub use i18n::Language;
 pub use ir::{Case, Function, Program, Stmt};
-pub use parse::{ParseOptions, Parsed, Warning, parse};
+pub use parse::{ParseOptions, Parsed, Source, Warning, parse, parse_files};
 
 use std::collections::HashSet;
 

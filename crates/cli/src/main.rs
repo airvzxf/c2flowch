@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use anyhow::{Context, Result, anyhow};
-use c2flowch_core::{Language, ParseOptions, Program};
+use c2flowch_core::{Language, ParseOptions, Program, Source};
 use clap::{Parser, Subcommand, ValueEnum};
 use std::fs;
 use std::io::{IsTerminal, Write};
@@ -60,14 +60,19 @@ enum Commands {
     /// (process, io, call, if, while, for, switch...). Every text is the
     /// label printed in the symbol, so you can edit it before rendering.
     Parse {
-        /// The C source file
-        input: PathBuf,
-        /// The YAML file to write [default: INPUT with the .yaml extension]
+        /// The C source files of one program
+        ///
+        /// With several files, a call to a function defined in any of them
+        /// is a call symbol, and every function gets its own flowchart.
+        #[arg(required = true)]
+        input: Vec<PathBuf>,
+        /// The YAML file to write [default: the first INPUT with the .yaml
+        /// extension]
         #[arg(short, long)]
         output: Option<PathBuf>,
         /// Level of detail
         ///
-        /// 1: calls to functions of the file, and the structures around them
+        /// 1: calls to functions of the files, and the structures around them
         /// 2: every control structure, input/output and calls
         /// 3: level 2 plus assignments and other operations (default)
         /// 4: level 3 plus declarations without a value
@@ -127,17 +132,33 @@ fn main() -> Result<()> {
     }
 }
 
-fn parse(input: &Path, output: Option<PathBuf>, level: u8, lang: Language) -> Result<()> {
-    let code = fs::read_to_string(input).with_context(|| format!("reading {}", input.display()))?;
-    let title = input
-        .file_name()
-        .map(|f| f.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let parsed = c2flowch_core::parse(&code, &ParseOptions { title, level, lang })?;
-    for w in &parsed.warnings {
-        eprintln!("warning: {}:{w}", input.display());
+fn parse(inputs: &[PathBuf], output: Option<PathBuf>, level: u8, lang: Language) -> Result<()> {
+    let mut codes = Vec::new();
+    for input in inputs {
+        codes.push(
+            fs::read_to_string(input).with_context(|| format!("reading {}", input.display()))?,
+        );
     }
-    let output = output.unwrap_or_else(|| input.with_extension("yaml"));
+    let names: Vec<String> = inputs.iter().map(|p| p.display().to_string()).collect();
+    let sources: Vec<Source> = names
+        .iter()
+        .zip(&codes)
+        .map(|(name, code)| Source { name, code })
+        .collect();
+    let title = inputs
+        .iter()
+        .map(|p| {
+            p.file_name()
+                .map(|f| f.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let parsed = c2flowch_core::parse_files(&sources, &ParseOptions { title, level, lang })?;
+    for w in &parsed.warnings {
+        eprintln!("warning: {}:{w}", w.file);
+    }
+    let output = output.unwrap_or_else(|| inputs[0].with_extension("yaml"));
     fs::write(&output, parsed.program.to_yaml()?)
         .with_context(|| format!("writing {}", output.display()))?;
     eprintln!("Saved {}", output.display());
