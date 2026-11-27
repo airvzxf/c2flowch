@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Labels printed in the flowcharts, in every supported language.
 
 use serde::{Deserialize, Serialize};

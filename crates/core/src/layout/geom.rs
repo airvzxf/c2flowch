@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Drawing primitives on a grid of character cells.
 //!
 //! The layout works in cells so that the ASCII renderer can draw it as is.

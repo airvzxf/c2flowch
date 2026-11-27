@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! C source -> structured IR, using the tree-sitter C grammar.
 
 mod text;

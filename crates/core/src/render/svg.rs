@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Vector rendering. Every cell of the layout grid becomes `CW x CH`
 //! pixels; lines run through the centers of their cells.
 

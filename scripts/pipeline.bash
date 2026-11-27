@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # pipeline.bash - Procesa todos los archivos C a diagramas de flujo (Multiprocesamiento)
 #

@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Builds the c2flowch binary for each platform and attaches the archives
+# to the GitHub release. Runs when a release is published, or by hand for
+# an existing tag.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v2.0.1)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: macos-latest, target: aarch64-apple-darwin }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --locked -p c2flowch --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          name="c2flowch-${TAG}-${{ matrix.target }}"
+          mkdir -p "dist/${name}"
+          bin="target/${{ matrix.target }}/release/c2flowch"
+          [ -f "${bin}.exe" ] && bin="${bin}.exe"
+          cp "${bin}" README.md LICENSE CHANGELOG.md "dist/${name}/"
+          cd dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a -tzip "${name}.zip" "${name}" >/dev/null
+            sha256sum "${name}.zip" > "${name}.zip.sha256"
+          else
+            tar -czf "${name}.tar.gz" "${name}"
+            shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          fi
+      - name: Smoke test
+        shell: bash
+        run: |
+          bin="target/${{ matrix.target }}/release/c2flowch"
+          [ -f "${bin}.exe" ] && bin="${bin}.exe"
+          "${bin}" --version
+          "${bin}" parse resources/c/while_break.c -o smoke.yaml
+          "${bin}" render smoke.yaml
+      - name: Upload to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(dist/*.zip dist/*.zip.sha256 dist/*.tar.gz dist/*.tar.gz.sha256)
+          gh release upload "${TAG}" "${files[@]}" --clobber

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.1
+
+### Changed
+
+- The project is licensed `AGPL-3.0-or-later`: the crates declare it and
+  every source file carries an SPDX header.
+- YAML is read and written with `serde_norway`, a maintained fork of the
+  unmaintained `serde_yaml`; the YAML format does not change.
+
+### Added
+
+- Continuous integration: formatting, Clippy and tests on Linux, macOS and
+  Windows for every pull request.
+- Release binaries for Linux (x86_64, aarch64), macOS (aarch64) and
+  Windows (x86_64), attached to each GitHub release.
+
 ## 2.0.0
 
 A rewrite of the parser, the intermediate representation and the layout.

@@ -6,15 +6,17 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "2.0.0"
+version = "2.0.1"
 authors = ["Israel Alberto Roldan Vega"]
 edition = "2024"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/airvzxf/c2flowch"
 
 [workspace.dependencies]
 anyhow = "1.0.102"
 clap = { version = "4.5.60", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_yaml = "0.9.34"
+serde_norway = "0.9.42"
 tree-sitter = "0.26.6"
 tree-sitter-c = "0.24.1"
 unicode-width = "0.2.2"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Every C file in `resources/c`: snapshots of the YAML and of the text
 //! drawing, plus layout invariants that must hold for any input.
 
