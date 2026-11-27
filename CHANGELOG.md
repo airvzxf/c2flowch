@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0
+
+### Added
+
+- Colored text output: `render --color auto|always|never`. Symbol
+  outlines are colored by kind (terminators green, processes blue,
+  calls cyan, input/output magenta, preparations red, decisions
+  yellow); arrows and branch labels are bold. `auto`, the default,
+  colors only when the text goes to a terminal and `NO_COLOR` is not
+  set; `always` also colors into a file. Without color the output is
+  byte for byte the same as before. The library adds
+  `render_ascii_color`.
+
 ## 2.2.0
 
 ### Added

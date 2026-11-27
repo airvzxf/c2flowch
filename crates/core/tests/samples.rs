@@ -3,7 +3,9 @@
 //! drawing, plus layout invariants that must hold for any input.
 
 use c2flowch_core::layout::geom::{Diagram, width};
-use c2flowch_core::{Language, ParseOptions, Program, layout::layout, parse, render_ascii};
+use c2flowch_core::{
+    Language, ParseOptions, Program, layout::layout, parse, render_ascii, render_ascii_color,
+};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -40,6 +42,44 @@ fn snapshots() {
         let p = program(&name, code.as_str(), 3, Language::En);
         insta::assert_snapshot!(format!("{name}.yaml"), p.to_yaml().unwrap());
         insta::assert_snapshot!(format!("{name}.txt"), render_ascii(&p));
+    }
+}
+
+/// Removes ANSI SGR escapes (`ESC [ ... m`).
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::new();
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            assert_eq!(chars.next(), Some('['), "escape without [");
+            for e in chars.by_ref() {
+                if e == 'm' {
+                    break;
+                }
+                assert!(e.is_ascii_digit() || e == ';', "unexpected {e:?}");
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+#[test]
+fn color_only_adds_escapes() {
+    for (name, code) in samples() {
+        let p = program(&name, code.as_str(), 3, Language::En);
+        let plain = render_ascii(&p);
+        let color = render_ascii_color(&p);
+        assert!(color.contains("\x1b[32m"), "{name}: no green terminator");
+        assert_eq!(strip_ansi(&color), plain, "{name}");
+        for line in color.lines().filter(|l| l.contains('\x1b')) {
+            let last = line.rfind('\x1b').unwrap();
+            assert!(
+                line[last..].starts_with("\x1b[0m"),
+                "{name}: unreset line {line:?}"
+            );
+        }
     }
 }
 

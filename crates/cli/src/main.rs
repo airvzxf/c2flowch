@@ -3,7 +3,7 @@ use anyhow::{Context, Result, anyhow};
 use c2flowch_core::{Language, ParseOptions, Program};
 use clap::{Parser, Subcommand, ValueEnum};
 use std::fs;
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
@@ -25,6 +25,16 @@ enum Format {
     Svg,
     /// Raster image, rendered from the SVG
     Png,
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum Color {
+    /// Color when writing text to a terminal and NO_COLOR is not set
+    Auto,
+    /// Always color the text format, also into a file
+    Always,
+    /// Never color
+    Never,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug)]
@@ -82,6 +92,9 @@ enum Commands {
         /// OUTPUT-<function>.<ext> for the others
         #[arg(short, long)]
         split_subroutines: bool,
+        /// Color the text format with ANSI escapes
+        #[arg(long, value_enum, default_value_t = Color::Auto)]
+        color: Color,
     },
 }
 
@@ -98,7 +111,19 @@ fn main() -> Result<()> {
             output,
             format,
             split_subroutines,
-        } => render(&input, output.as_deref(), format, split_subroutines),
+            color,
+        } => {
+            let color = match color {
+                Color::Always => true,
+                Color::Never => false,
+                Color::Auto => {
+                    output.is_none()
+                        && std::io::stdout().is_terminal()
+                        && std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty())
+                }
+            };
+            render(&input, output.as_deref(), format, split_subroutines, color)
+        }
     }
 }
 
@@ -119,7 +144,13 @@ fn parse(input: &Path, output: Option<PathBuf>, level: u8, lang: Language) -> Re
     Ok(())
 }
 
-fn render(input: &Path, output: Option<&Path>, format: Format, split: bool) -> Result<()> {
+fn render(
+    input: &Path,
+    output: Option<&Path>,
+    format: Format,
+    split: bool,
+    color: bool,
+) -> Result<()> {
     let yaml = fs::read_to_string(input).with_context(|| format!("reading {}", input.display()))?;
     let program =
         Program::from_yaml(&yaml).with_context(|| format!("reading {}", input.display()))?;
@@ -147,6 +178,7 @@ fn render(input: &Path, output: Option<&Path>, format: Format, split: bool) -> R
 
     for (suffix, prog) in parts {
         let bytes = match format {
+            Format::Ascii if color => c2flowch_core::render_ascii_color(&prog).into_bytes(),
             Format::Ascii => c2flowch_core::render_ascii(&prog).into_bytes(),
             Format::Svg => c2flowch_core::render_svg(&prog).into_bytes(),
             Format::Png => png(&c2flowch_core::render_svg(&prog))?,

@@ -56,10 +56,10 @@ The core library does no I/O, ready for a WebAssembly build.
 - [x] Warnings for what cannot be drawn faithfully.
 - [x] Snapshot tests for every sample, layout invariants at every level, CLI
       tests.
+- [x] Colored terminal output: `render --color auto|always|never`.
 
 ### Next
 
 - [ ] **WebAssembly:** a `c2flowch-wasm` crate exposing parse and render to
       the browser.
 - [ ] **Multiple files:** follow calls into other `.c` files of a project.
-- [ ] **Colored terminal output.**
