@@ -1,438 +1,285 @@
-use crate::render::routing::RoutingDrawing;
-use crate::render::shapes::ShapeDrawing;
+//! Vector rendering. Every cell of the layout grid becomes `CW × CH`
+//! pixels; lines run through the centers of their cells.
 
-pub struct SvgRenderer {
-    width: usize,
-    height: usize,
-    cw: f64,
-    ch: f64,
-    elements: Vec<String>,
-    offset_x: f64,
-    offset_y: f64,
+use crate::layout::geom::{
+    DECISION_MID, Diagram, Dir, End, PAD, Path, Pt, Shape, ShapeKind, step, width,
+};
+use std::fmt::Write;
+
+const CW: f64 = 9.0;
+const CH: f64 = 18.0;
+const MARGIN: f64 = 24.0;
+const TITLE_H: f64 = 40.0;
+const SECTION_GAP: f64 = 48.0;
+/// Half the height of terminators and case symbols, in rows.
+const ROUND_HALF: f64 = 0.75;
+
+/// IBM Plex Mono advances 0.6 em per character: 15 px × 0.6 = 9 px = CW.
+const STYLE: &str = "text{font-family:'IBM Plex Mono',monospace;font-size:15px;fill:#1f2328}\
+.lbl{font-size:13px;fill:#57606a}\
+.title{font-family:sans-serif;font-size:20px;font-weight:bold}\
+.fn{font-family:sans-serif;font-size:15px;font-weight:bold;fill:#57606a}\
+.sym{fill:#fff;stroke:#1f2328;stroke-width:1.6}\
+.line{fill:none;stroke:#1f2328;stroke-width:1.4}";
+
+struct Frame {
+    x0: i32,
+    y0: i32,
+    ox: f64,
+    oy: f64,
 }
 
-fn escape_html(s: &str) -> String {
-    s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#39;")
+impl Frame {
+    fn x(&self, x: i32) -> f64 {
+        self.ox + f64::from(x - self.x0) * CW + CW / 2.0
+    }
+
+    fn y(&self, y: i32) -> f64 {
+        self.oy + f64::from(y - self.y0) * CH + CH / 2.0
+    }
+
+    /// Pixel box of a symbol outline: left, top, right, bottom.
+    fn outline(&self, s: &Shape) -> (f64, f64, f64, f64) {
+        match s.kind {
+            ShapeKind::Terminator | ShapeKind::Case => (
+                self.x(s.x) - CW * 0.2,
+                self.y(s.y) - CH * ROUND_HALF,
+                self.x(s.right()) + CW * 0.2,
+                self.y(s.bottom()) + CH * ROUND_HALF,
+            ),
+            ShapeKind::Decision => {
+                let cx = self.x(s.cx());
+                let half = (f64::from(s.w) / 2.0 - 0.5) * CW;
+                (cx - half, self.y(s.y), cx + half, self.y(s.bottom()))
+            }
+            _ => (
+                self.x(s.x),
+                self.y(s.y),
+                self.x(s.right()),
+                self.y(s.bottom()),
+            ),
+        }
+    }
 }
 
-impl SvgRenderer {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self {
-            width,
-            height,
-            cw: 10.0,
-            ch: 20.0,
-            elements: Vec::new(),
-            offset_x: 0.0,
-            offset_y: 0.0,
+fn esc(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+fn text(out: &mut String, x: f64, y: f64, s: &str, class: Option<&str>) {
+    let class = class.map(|c| format!(" class=\"{c}\"")).unwrap_or_default();
+    let _ = writeln!(
+        out,
+        "<text x=\"{x:.1}\" y=\"{y:.1}\" dominant-baseline=\"central\" xml:space=\"preserve\"{class}>{}</text>",
+        esc(s)
+    );
+}
+
+fn shape(out: &mut String, f: &Frame, s: &Shape) {
+    let (l, t, r, b) = f.outline(s);
+    match s.kind {
+        ShapeKind::Process => {
+            let _ = writeln!(
+                out,
+                "<rect class=\"sym\" x=\"{l:.1}\" y=\"{t:.1}\" width=\"{:.1}\" height=\"{:.1}\"/>",
+                r - l,
+                b - t
+            );
         }
-    }
-
-    pub fn set_offset(&mut self, ox: f64, oy: f64) {
-        self.offset_x = ox;
-        self.offset_y = oy;
-    }
-
-    pub fn add_title(&mut self, title: &str) {
-        let lines: Vec<&str> = title.trim().split('\n').collect();
-        let mut y = self.offset_y * self.ch - (lines.len() as f64 * 25.0);
-        if y < 30.0 {
-            y = 30.0;
-        }
-        for line in lines {
-            self.elements.push(format!(
-                r#"<text x="{}" y="{}" fill="black" font-weight="bold" font-size="18" font-family="sans-serif">{}</text>"#,
-                30.0, y, escape_html(line)
-            ));
-            y += 25.0;
-        }
-    }
-
-    pub fn render(&self) -> String {
-        let w = (self.width as f64) * self.cw;
-        let h = (self.height as f64) * self.ch;
-
-        let mut svg = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {} {}" width="{}" height="{}">"#,
-            w, h, w, h
-        );
-        svg.push_str(r#"<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="black" /></marker></defs>"#);
-        svg.push_str(
-            r#"<style>text { font-family: monospace; font-size: 14px; font-weight: 400; }</style>"#,
-        );
-        svg.push_str(r#"<rect width="100%" height="100%" fill="white" />"#);
-
-        for el in &self.elements {
-            svg.push_str(el);
-            svg.push('\n');
-        }
-
-        svg.push_str("</svg>");
-        svg
-    }
-
-    fn add_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, arrow: bool) {
-        let mut x2_mod = x2;
-        let mut y2_mod = y2;
-
-        if arrow {
-            let dx = x2 - x1;
-            let dy = y2 - y1;
-            let len = (dx * dx + dy * dy).sqrt();
-            if len > 0.0 {
-                // Pull back the end of the line by 15 user units
-                // so it doesn't poke out of the arrowhead tip, and prevents
-                // the tip from overlapping thick black target borders.
-                let pullback = len.min(15.0);
-                x2_mod = x2 - (dx / len) * pullback;
-                y2_mod = y2 - (dy / len) * pullback;
+        ShapeKind::Call => {
+            let _ = writeln!(
+                out,
+                "<rect class=\"sym\" x=\"{l:.1}\" y=\"{t:.1}\" width=\"{:.1}\" height=\"{:.1}\"/>",
+                r - l,
+                b - t
+            );
+            for x in [l + 2.0 * CW, r - 2.0 * CW] {
+                let _ = writeln!(
+                    out,
+                    "<line class=\"line\" x1=\"{x:.1}\" y1=\"{t:.1}\" x2=\"{x:.1}\" y2=\"{b:.1}\"/>"
+                );
             }
         }
+        ShapeKind::Io => {
+            let off = f64::from(s.h - 1) * CW;
+            let _ = writeln!(
+                out,
+                "<polygon class=\"sym\" points=\"{:.1},{t:.1} {r:.1},{t:.1} {:.1},{b:.1} {l:.1},{b:.1}\"/>",
+                l + off,
+                r - off
+            );
+        }
+        ShapeKind::Prep => {
+            let m = (t + b) / 2.0;
+            let _ = writeln!(
+                out,
+                "<polygon class=\"sym\" points=\"{:.1},{t:.1} {:.1},{t:.1} {r:.1},{m:.1} {:.1},{b:.1} {:.1},{b:.1} {l:.1},{m:.1}\"/>",
+                l + CW,
+                r - CW,
+                r - CW,
+                l + CW
+            );
+        }
+        ShapeKind::Terminator | ShapeKind::Case => {
+            let rad = (b - t) / 2.0;
+            let _ = writeln!(
+                out,
+                "<rect class=\"sym\" x=\"{l:.1}\" y=\"{t:.1}\" width=\"{:.1}\" height=\"{:.1}\" rx=\"{rad:.1}\"/>",
+                r - l,
+                b - t
+            );
+        }
+        ShapeKind::Decision => {
+            let cx = f.x(s.cx());
+            let m = f.y(s.y + DECISION_MID);
+            let _ = writeln!(
+                out,
+                "<polygon class=\"sym\" points=\"{cx:.1},{t:.1} {r:.1},{m:.1} {cx:.1},{b:.1} {l:.1},{m:.1}\"/>"
+            );
+        }
+    }
 
-        let marker = if arrow {
-            r#" marker-end="url(#arrowhead)""#
-        } else {
+    // Text: same cells as in the text rendering.
+    let left_of = |cell: i32| f.x(cell) - CW / 2.0;
+    match s.kind {
+        ShapeKind::Decision => {
+            let line = s.lines.join(" ");
+            let x = s.x + 1 + (s.w - 2 - width(&line)) / 2;
+            text(out, left_of(x), f.y(s.y + DECISION_MID), &line, None);
+        }
+        ShapeKind::Terminator | ShapeKind::Case => {
+            for (j, line) in s.lines.iter().enumerate() {
+                let x = s.x + (s.w - width(line)) / 2;
+                text(out, left_of(x), f.y(s.y + row(j)), line, None);
+            }
+        }
+        _ => {
+            for (j, line) in s.lines.iter().enumerate() {
+                let j = row(j);
+                let x = match s.kind {
+                    ShapeKind::Call => s.x + 3 + PAD,
+                    ShapeKind::Io => s.x + (s.h - 1) - (j + 1) + 1 + PAD,
+                    _ => s.x + 1 + PAD,
+                };
+                text(out, left_of(x), f.y(s.y + 1 + j), line, None);
+            }
+        }
+    }
+}
+
+fn row(j: usize) -> i32 {
+    i32::try_from(j).unwrap_or(i32::MAX)
+}
+
+/// Pixel points of a line. Ends next to a symbol stretch to its outline.
+fn points(f: &Frame, d: &Diagram, p: &Path) -> Vec<(f64, f64)> {
+    let mut pts: Vec<(f64, f64)> = p.points.iter().map(|&(x, y)| (f.x(x), f.y(y))).collect();
+    let snap = |pt: &mut (f64, f64), cell: Pt, toward: Dir| {
+        let near = step(cell, toward);
+        if let Some(s) = d
+            .shapes
+            .iter()
+            .find(|s| s.contains(near) || s.contains(cell))
+        {
+            let (l, t, r, b) = f.outline(s);
+            match toward {
+                Dir::Up => pt.1 = b,
+                Dir::Down => pt.1 = t,
+                Dir::Left => pt.0 = r,
+                Dir::Right => pt.0 = l,
+            }
+        }
+    };
+    if let Some(d0) = p.first_dir() {
+        snap(&mut pts[0], p.points[0], d0.opposite());
+    }
+    if p.end == End::Shape
+        && let Some(dn) = p.last_dir()
+    {
+        let n = pts.len() - 1;
+        snap(&mut pts[n], p.points[n], dn);
+    }
+    pts
+}
+
+fn diagram(out: &mut String, d: &Diagram, ox: f64, oy: f64) {
+    let f = Frame {
+        x0: d.min.0,
+        y0: d.min.1,
+        ox,
+        oy,
+    };
+    let (masks, crossings) = d.line_masks();
+    for p in &d.paths {
+        let pts: Vec<String> = points(&f, d, p)
+            .iter()
+            .map(|(x, y)| format!("{x:.1},{y:.1}"))
+            .collect();
+        let marker = if p.end == End::Plain {
             ""
+        } else {
+            " marker-end=\"url(#arrow)\""
         };
-        self.elements.push(format!(
-            r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="black" stroke-width="2"{} />"#,
-            x1, y1, x2_mod, y2_mod, marker
-        ));
+        let _ = writeln!(
+            out,
+            "<polyline class=\"line\" points=\"{}\"{marker}/>",
+            pts.join(" ")
+        );
     }
-
-    fn add_text_aligned(&mut self, x: f64, y: f64, text: &str, anchor: &str) {
-        self.elements.push(format!(
-            r#"<text x="{}" y="{}" fill="black" dominant-baseline="middle" text-anchor="{}">{}</text>"#,
-            x, y, anchor, escape_html(text)
-        ));
-    }
-}
-
-impl ShapeDrawing for SvgRenderer {
-    fn draw_box(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        let rx = (x as f64 + self.offset_x) * self.cw;
-        let ry = (y as f64 + self.offset_y) * self.ch;
-        let rw = (w as f64) * self.cw;
-        let rh = (h as f64) * self.ch;
-        self.elements.push(format!(
-            r#"<rect x="{}" y="{}" width="{}" height="{}" fill="white" stroke="black" stroke-width="2" rx="4" />"#,
-            rx, ry, rw, rh
-        ));
-        self.draw_centered_text(x, y, w, h, text);
-    }
-
-    fn draw_predefined_process(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        self.draw_box(x, y, w, h, text);
-        let rx = (x as f64 + self.offset_x) * self.cw;
-        let ry = (y as f64 + self.offset_y) * self.ch;
-        let rh = (h as f64) * self.ch;
-        let offset = 2.0 * self.cw;
-
-        self.elements.push(format!(
-            r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="black" stroke-width="2" />"#,
-            rx + offset,
-            ry,
-            rx + offset,
-            ry + rh
-        ));
-        self.elements.push(format!(
-            r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="black" stroke-width="2" />"#,
-            rx + (w as f64) * self.cw - offset,
-            ry,
-            rx + (w as f64) * self.cw - offset,
-            ry + rh
-        ));
-    }
-
-    fn draw_parallelogram(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        let rx = (x as f64 + self.offset_x) * self.cw;
-        let ry = (y as f64 + self.offset_y) * self.ch;
-        let rw = (w as f64) * self.cw;
-        let rh = (h as f64) * self.ch;
-        let offset = rh / 2.0;
-
-        self.elements.push(format!(
-            r#"<polygon points="{},{} {},{} {},{} {},{}" fill="white" stroke="black" stroke-width="2" />"#,
-            rx + offset, ry,
-            rx + rw, ry,
-            rx + rw - offset, ry + rh,
-            rx, ry + rh
-        ));
-        self.draw_centered_text(x, y, w, h, text);
-    }
-
-    fn draw_rhombus(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        let rx = (x as f64 + self.offset_x) * self.cw;
-        let ry = (y as f64 + self.offset_y) * self.ch;
-        let rw = (w as f64) * self.cw;
-        let rh = (h as f64) * self.ch;
-
-        self.elements.push(format!(
-            r#"<polygon points="{},{} {},{} {},{} {},{}" fill="white" stroke="black" stroke-width="2" />"#,
-            rx + rw / 2.0, ry,
-            rx + rw, ry + rh / 2.0,
-            rx + rw / 2.0, ry + rh,
-            rx, ry + rh / 2.0
-        ));
-        self.draw_centered_text(x, y, w, h, text);
-    }
-
-    fn draw_terminator(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        let rx = (x as f64 + self.offset_x) * self.cw;
-        let ry = (y as f64 + self.offset_y) * self.ch;
-        let rw = (w as f64) * self.cw;
-        let rh = (h as f64) * self.ch;
-        let r = rh / 2.0;
-
-        self.elements.push(format!(
-            r#"<rect x="{}" y="{}" width="{}" height="{}" fill="white" stroke="black" stroke-width="2" rx="{}" ry="{}" />"#,
-            rx, ry, rw, rh, r, r
-        ));
-        self.draw_centered_text(x, y, w, h, text);
-    }
-
-    fn draw_switch_case(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        self.draw_terminator(x, y, w, h, text);
-    }
-
-    fn draw_centered_text(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        let cx = (x as f64 + self.offset_x + w as f64 / 2.0) * self.cw;
-        let cy = (y as f64 + self.offset_y + h as f64 / 2.0) * self.ch;
-        let lines: Vec<&str> = text.split('\n').collect();
-        let n_lines = lines.len() as f64;
-
-        let max_chars = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
-        let approx_char_width = 8.4; // width of a 14px monospace character
-        let block_width = max_chars as f64 * approx_char_width;
-        let start_x = cx - (block_width / 2.0);
-
-        for (i, line) in lines.iter().enumerate() {
-            let offset = (i as f64 - (n_lines - 1.0) / 2.0) * 16.0; // 16px line height approx
-            self.add_text_aligned(start_x, cy + offset, line, "start");
+    for (&(x, y), &m) in &masks {
+        if m.count_ones() >= 3 && !crossings.contains_key(&(x, y)) {
+            let _ = writeln!(
+                out,
+                "<circle cx=\"{:.1}\" cy=\"{:.1}\" r=\"3\" fill=\"#1f2328\"/>",
+                f.x(x),
+                f.y(y)
+            );
         }
     }
-
-    fn draw_content_text(&mut self, x: usize, y: usize, w: usize, h: usize, text: &str) {
-        self.draw_centered_text(x, y, w, h, text);
+    for s in &d.shapes {
+        shape(out, &f, s);
+    }
+    for l in &d.labels {
+        text(out, f.x(l.x) - CW / 2.0, f.y(l.y), &l.text, Some("lbl"));
     }
 }
 
-impl RoutingDrawing for SvgRenderer {
-    fn draw_vertical_line(
-        &mut self,
-        x: usize,
-        y1: usize,
-        y2: usize,
-        arrow: bool,
-        label: Option<&str>,
-        from_node: bool,
-    ) {
-        if y1 >= y2 {
-            return;
+/// Draws diagrams one below the other, under a title.
+pub fn render(title: &str, diagrams: &[Diagram]) -> String {
+    let show_names = diagrams.len() > 1;
+    let name_h = if show_names { 28.0 } else { 0.0 };
+    let mut body = String::new();
+    let mut y = MARGIN + TITLE_H;
+    let mut w: f64 = 320.0;
+    for (i, d) in diagrams.iter().enumerate() {
+        if i > 0 {
+            y += SECTION_GAP;
         }
-        let vx = (x as f64 + self.offset_x + 0.5) * self.cw;
-        let mut vy1 = (y1 as f64 + self.offset_y + 0.5) * self.ch;
-        let mut vy2 = (y2 as f64 + self.offset_y + 0.5) * self.ch;
-
-        if from_node {
-            vy1 -= self.ch / 2.0; // Start exactly at the bottom boundary of the cell
+        if show_names {
+            text(&mut body, MARGIN, y + 8.0, &d.name, Some("fn"));
+            y += name_h;
         }
-        if arrow {
-            vy2 -= self.ch / 2.0; // Stop exactly at the top boundary of the target cell
-        }
-
-        self.add_line(vx, vy1, vx, vy2, arrow);
-
-        if let Some(lbl) = label {
-            // For vertical lines, "False" is generally to the left, and other labels to the right.
-            if lbl.starts_with("Fals") || lbl == "False" {
-                self.add_text_aligned(vx - 10.0, vy1 + 25.0, lbl, "end");
-            } else {
-                self.add_text_aligned(vx + 10.0, vy1 + 25.0, lbl, "start");
-            }
-        }
+        diagram(&mut body, d, MARGIN, y);
+        y += f64::from(d.height()) * CH;
+        w = w.max(MARGIN * 2.0 + f64::from(d.width()) * CW);
     }
-
-    fn draw_horizontal_right_line(&mut self, x1: usize, x2: usize, y: usize, label: Option<&str>) {
-        if x1 >= x2 {
-            return;
-        }
-        let mut vx1 = (x1 as f64 + self.offset_x + 0.5) * self.cw;
-        vx1 += self.cw / 2.0; // Start at the right edge of the cell
-        let vx2 = (x2 as f64 + self.offset_x + 0.5) * self.cw;
-        let vy = (y as f64 + self.offset_y + 0.5) * self.ch;
-        self.add_line(vx1, vy, vx2, vy, false);
-
-        if let Some(lbl) = label {
-            self.add_text_aligned(vx1 + 15.0, vy - 10.0, lbl, "start");
-        }
-    }
-
-    fn draw_elbow_right_down(
-        &mut self,
-        x1: usize,
-        y1: usize,
-        x2: usize,
-        y2: usize,
-        label: Option<&str>,
-        arrow: bool,
-    ) {
-        let mut vx1 = (x1 as f64 + self.offset_x + 0.5) * self.cw;
-        vx1 += self.cw / 2.0; // Start at the right edge of the cell (node tip)
-        let vx2 = (x2 as f64 + self.offset_x + 0.5) * self.cw;
-        let vy1 = (y1 as f64 + self.offset_y + 0.5) * self.ch;
-        let mut vy2 = (y2 as f64 + self.offset_y + 0.5) * self.ch;
-
-        if arrow {
-            vy2 -= self.ch / 2.0; // Stop exactly at the top boundary of the target cell
-        }
-
-        self.add_line(vx1, vy1, vx2, vy1, false);
-        self.add_line(vx2, vy1, vx2, vy2, arrow);
-
-        if let Some(lbl) = label {
-            self.add_text_aligned(vx1 + 15.0, vy1 - 10.0, lbl, "start");
-        }
-    }
-
-    fn draw_merge_left(
-        &mut self,
-        x_node: usize,
-        y_start: usize,
-        x_target: usize,
-        y_end: usize,
-        from_node: bool,
-    ) {
-        if x_node == x_target {
-            self.draw_vertical_line(x_node, y_start, y_end, false, None, from_node);
-            return;
-        }
-        let vxn = (x_node as f64 + self.offset_x + 0.5) * self.cw;
-        let vxt = (x_target as f64 + self.offset_x + 0.5) * self.cw;
-        let mut vys = (y_start as f64 + self.offset_y + 0.5) * self.ch;
-        if from_node {
-            vys -= self.ch / 2.0; // Start at the bottom of the node
-        }
-        let vye = (y_end as f64 + self.offset_y + 0.5) * self.ch;
-
-        self.add_line(vxn, vys, vxn, vye, false);
-        self.add_line(vxn, vye, vxt, vye, true);
-    }
-
-    fn draw_loop_back(
-        &mut self,
-        x_start: usize,
-        y_start: usize,
-        x_target: usize,
-        y_target: usize,
-        margin_x: usize,
-        label: Option<&str>,
-        is_bottom_exit: bool,
-        draw_arrow: bool,
-        join_y: usize,
-    ) {
-        let mut vxs = (x_start as f64 + self.offset_x + 0.5) * self.cw;
-        let vxt = (x_target as f64 + self.offset_x + 0.5) * self.cw;
-        let vxm = (margin_x as f64 + self.offset_x + 0.5) * self.cw;
-        let mut vys = (y_start as f64 + self.offset_y + 0.5) * self.ch;
-        let mut vyt = (y_target as f64 + self.offset_y + 0.5) * self.ch;
-        let vyj = (join_y as f64 + self.offset_y + 0.5) * self.ch;
-
-        if is_bottom_exit {
-            vys -= self.ch / 2.0; // Attach perfectly to bottom
-        } else {
-            vxs -= self.cw / 2.0; // Attach perfectly to left
-        }
-
-        let turn_y = if is_bottom_exit { vys + self.ch } else { vys };
-
-        if is_bottom_exit {
-            self.add_line(vxs, vys, vxs, turn_y, false);
-        }
-
-        self.add_line(vxs, turn_y, vxm, turn_y, false);
-        if let Some(lbl) = label {
-            if vxm < vxs {
-                self.add_text_aligned(vxs - 15.0, turn_y - 10.0, lbl, "end");
-            } else {
-                self.add_text_aligned(vxs + 15.0, turn_y - 10.0, lbl, "start");
-            }
-        }
-
-        self.add_line(vxm, turn_y, vxm, vyj, false);
-        self.add_line(vxm, vyj, vxt, vyj, true); // Arrow pointing back to main flow
-
-        if draw_arrow {
-            vyt -= self.ch / 2.0;
-        }
-        self.add_line(vxt, vyj, vxt, vyt, draw_arrow);
-    }
-
-    fn draw_loop_back_right(
-        &mut self,
-        x_start: usize,
-        y_start: usize,
-        x_target: usize,
-        y_target: usize,
-        margin_x: usize,
-        label: Option<&str>,
-        is_bottom_exit: bool,
-        draw_arrow: bool,
-        join_y: usize,
-    ) {
-        let mut vxs = (x_start as f64 + self.offset_x + 0.5) * self.cw;
-        let vxt = (x_target as f64 + self.offset_x + 0.5) * self.cw;
-        let vxm = (margin_x as f64 + self.offset_x + 0.5) * self.cw;
-        let mut vys = (y_start as f64 + self.offset_y + 0.5) * self.ch;
-        let mut vyt = (y_target as f64 + self.offset_y + 0.5) * self.ch;
-        let vyj = (join_y as f64 + self.offset_y + 0.5) * self.ch;
-
-        if is_bottom_exit {
-            vys -= self.ch / 2.0; // Attach perfectly to bottom
-        } else {
-            vxs += self.cw / 2.0; // Attach perfectly to right
-        }
-
-        let turn_y = if is_bottom_exit { vys + self.ch } else { vys };
-
-        if is_bottom_exit {
-            self.add_line(vxs, vys, vxs, turn_y, false);
-        }
-
-        self.add_line(vxs, turn_y, vxm, turn_y, false);
-        if let Some(lbl) = label {
-            if vxm < vxs {
-                self.add_text_aligned(vxs - 15.0, turn_y - 10.0, lbl, "end");
-            } else {
-                self.add_text_aligned(vxs + 15.0, turn_y - 10.0, lbl, "start");
-            }
-        }
-
-        self.add_line(vxm, turn_y, vxm, vyj, false);
-        self.add_line(vxm, vyj, vxt, vyj, true); // Arrow pointing back to main flow
-
-        if draw_arrow {
-            vyt -= self.ch / 2.0;
-        }
-        self.add_line(vxt, vyj, vxt, vyt, draw_arrow);
-    }
-
-    fn draw_break_line(&mut self, sx: usize, sy: usize, tx: usize, ty: usize, collector_x: usize) {
-        let vsx = (sx as f64 + self.offset_x + 0.5) * self.cw;
-        let vtx = (tx as f64 + self.offset_x + 0.5) * self.cw;
-        let vcx = (collector_x as f64 + self.offset_x + 0.5) * self.cw;
-        let mut vsy = (sy as f64 + self.offset_y + 0.5) * self.ch;
-        vsy -= self.ch / 2.0; // Attach to bottom of the node
-        let vty = (ty as f64 + self.offset_y + 0.5) * self.ch;
-        let y_turn = (sy as f64 + 2.0 + self.offset_y + 0.5) * self.ch;
-
-        self.add_line(vsx, vsy, vsx, y_turn, false);
-        self.add_line(vsx, y_turn, vcx, y_turn, false);
-        self.add_line(vcx, y_turn, vcx, vty, false);
-        self.add_line(vcx, vty, vtx, vty, true);
-    }
+    let h = y + MARGIN;
+    let mut out = String::new();
+    let _ = writeln!(
+        out,
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {w:.0} {h:.0}\" width=\"{w:.0}\" height=\"{h:.0}\">"
+    );
+    let _ = writeln!(
+        out,
+        "<defs><marker id=\"arrow\" viewBox=\"0 0 10 10\" refX=\"10\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#1f2328\"/></marker></defs>"
+    );
+    let _ = writeln!(out, "<style>{STYLE}</style>");
+    let _ = writeln!(out, "<rect width=\"100%\" height=\"100%\" fill=\"#fff\"/>");
+    text(&mut out, MARGIN, MARGIN + 12.0, title, Some("title"));
+    out.push_str(&body);
+    out.push_str("</svg>\n");
+    out
 }

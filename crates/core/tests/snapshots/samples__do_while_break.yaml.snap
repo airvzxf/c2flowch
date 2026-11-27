@@ -1,0 +1,25 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: do_while_break.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: tries ← 0
+  - do_while:
+      body:
+      - process: tries ← tries + 1
+      - if:
+          cond: tries > 3
+          then:
+          - break
+      - if:
+          cond: tries = 2
+          then:
+          - continue
+      - io: Print "try"
+      cond: tries < 10
+  - return: '0'

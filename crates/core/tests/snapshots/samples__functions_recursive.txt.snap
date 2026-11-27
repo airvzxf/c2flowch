@@ -1,0 +1,40 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+                     (  Start  )
+                          │
+                          🭭
+                   ┌─────────────┐
+                   │   num ← 5   │
+                   └──────┬──────┘
+                          │
+                          🭭
+         ┌─┬─────────────────────────────┬─┐
+         │ │   result ← factorial(num)   │ │
+         └─┴──────────────┬──────────────┴─┘
+                          │
+                          🭭
+  *─────────────────────────────────────────────────*
+ ╱   Print "Factorial of ", num, " is ", result    ╱
+*─────────────────────────┬───────────────────────*
+                          │
+                          🭭
+                      (  End  )
+
+
+     (  Start: factorial(n)  )
+                 │
+                 🭭
+                🯐🯓
+              🯐    🯓
+            🯐        🯓  True
+           🯝  n ≤ 1   🯟────────────┐
+            🯒        🯑             │
+              🯒    🯑               🭭
+                🯒🯑          (  Return: 1  )
+          False  │
+                 │
+                 │
+                 🭭
+(  Return: n * factorial(n - 1)  )

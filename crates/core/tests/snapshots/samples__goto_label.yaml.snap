@@ -1,0 +1,25 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: goto_label.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: x ← 0
+  - label: again
+  - process: 'x ← x > 5 ? 0 : x + 1'
+  - if:
+      cond: x < 3
+      then:
+      - goto: again
+  - while:
+      cond: '1'
+      body:
+      - if:
+          cond: x
+          then:
+          - break
+  - return: '0'

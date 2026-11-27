@@ -6,7 +6,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "2.0.0"
 authors = ["Israel Alberto Roldan Vega"]
 edition = "2024"
 
@@ -21,4 +21,5 @@ unicode-width = "0.2.2"
 assert_cmd = "2.1.2"
 tempfile = "3.26.0"
 predicates = "3.1.4"
+insta = { version = "1.43", features = ["yaml"] }
 c2flowch-core = { path = "crates/core" }

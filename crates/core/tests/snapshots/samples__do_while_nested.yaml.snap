@@ -1,0 +1,28 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: do_while_nested.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: i ← 0
+  - do_while:
+      body:
+      - io: Print "Iterar i"
+      - process: |-
+          i ← i + 1
+          j ← 0
+      - do_while:
+          body:
+          - io: |-
+              Print "Iterar j"
+              Print "While: ", i, ", ", j
+          - process: j ← j + 1
+          cond: j < 5
+      cond: i < 5
+  - io: Print "Fin"
+  - return: '0'

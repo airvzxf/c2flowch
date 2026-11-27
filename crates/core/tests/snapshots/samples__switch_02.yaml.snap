@@ -1,0 +1,35 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: switch_02.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: opcion ← 0
+  - switch:
+      expr: opcion
+      cases:
+      - values:
+        - '1'
+        body:
+        - io: Print "Caso 1"
+        - break
+      - values:
+        - '2'
+        body:
+        - io: Print "Caso 2"
+        - break
+      - values:
+        - '35'
+        body:
+        - io: Print "Caso 35"
+        - break
+      - default: true
+        body:
+        - io: Print "Caso default"
+  - io: Print "Fin"
+  - return: '0'

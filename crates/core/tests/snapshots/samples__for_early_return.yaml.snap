@@ -1,0 +1,28 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: for_early_return.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - call: r ← find(a, 3, 2)
+  - return: '0'
+- name: find
+  params:
+  - a
+  - n
+  - x
+  body:
+  - for:
+      init: i ← 0
+      cond: i < n
+      update: i ← i + 1
+      body:
+      - if:
+          cond: a[i] = x
+          then:
+          - return: i
+  - return: '-1'

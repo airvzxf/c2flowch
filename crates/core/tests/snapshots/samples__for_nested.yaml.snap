@@ -1,0 +1,27 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: for_nested.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - for:
+      init: i ← 0
+      cond: i < 3
+      update: i ← i + 1
+      body:
+      - io: Print "Iterar i"
+      - for:
+          init: j ← 0
+          cond: j < 3
+          update: j ← j + 1
+          body:
+          - io: |-
+              Print "Iterar j"
+              Print "For: ", i, ", ", j
+  - io: Print "Fin"
+  - return: '0'

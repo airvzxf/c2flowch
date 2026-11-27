@@ -1,0 +1,25 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: if_elseif_else.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: i ← 0
+  - if:
+      cond: i = 0
+      then:
+      - io: 'Print "i: ", i'
+      else:
+      - if:
+          cond: i = 1
+          then:
+          - io: 'Print "i == 1: ", i'
+          else:
+          - io: 'Print "i else: ", i'
+  - io: Print "Fin"
+  - return: '0'

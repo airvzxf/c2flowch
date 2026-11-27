@@ -1,0 +1,26 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: while_break.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: n ← 0
+  - while:
+      cond: '1'
+      body:
+      - io: Read n
+      - if:
+          cond: n < 0
+          then:
+          - break
+      - if:
+          cond: n = 0
+          then:
+          - io: Print "zero"
+          - continue
+      - io: Print n * 2
+  - return: '0'

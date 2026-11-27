@@ -1,0 +1,18 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+           (  Start  )
+                │
+                🭭
+┌───────────────────────────────┐
+│   s ← "int x = 5; printf("    │
+│   a ← 1                       │
+│   b ← 2                       │
+│   a ← b = 3                   │
+│   x ← y * z                   │
+│   arr[i++] ← 0                │
+└───────────────┬───────────────┘
+                │
+                🭭
+            (  End  )

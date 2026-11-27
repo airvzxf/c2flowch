@@ -1,0 +1,23 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: functions_basic.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - call: greet()
+  - call: sum ← add(5, 7)
+  - io: 'Print "Sum: ", sum'
+  - return: '0'
+- name: greet
+  body:
+  - io: Print "Hello, World!"
+- name: add
+  params:
+  - a
+  - b
+  body:
+  - return: a + b

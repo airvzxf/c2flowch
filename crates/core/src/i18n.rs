@@ -1,3 +1,5 @@
+//! Labels printed in the flowcharts, in every supported language.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -15,74 +17,63 @@ impl std::str::FromStr for Language {
         match s.to_lowercase().as_str() {
             "en" | "english" => Ok(Language::En),
             "es" | "spanish" | "español" => Ok(Language::Es),
-            _ => Err(format!("Unsupported language: {}", s)),
+            _ => Err(format!("unsupported language: {s} (expected en or es)")),
         }
     }
 }
 
-pub struct I18n;
+/// Every word that c2flowch writes by itself (not taken from the source).
+#[derive(Debug, Clone, Copy)]
+pub struct Words {
+    pub yes: &'static str,
+    pub no: &'static str,
+    pub start: &'static str,
+    pub end: &'static str,
+    pub ret: &'static str,
+    pub print: &'static str,
+    pub read: &'static str,
+    pub default: &'static str,
+    pub and: &'static str,
+    pub or: &'static str,
+    pub not: &'static str,
+    pub always: &'static str,
+}
 
-impl I18n {
-    pub fn t_true(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "True",
-            Language::Es => "Verdadero",
-        }
-    }
-
-    pub fn t_false(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "False",
-            Language::Es => "Falso",
-        }
-    }
-
-    pub fn t_start(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "Start",
-            Language::Es => "Inicio",
-        }
-    }
-
-    pub fn t_end(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "End",
-            Language::Es => "Fin",
-        }
-    }
-
-    pub fn t_return(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "Return",
-            Language::Es => "Retornar",
-        }
-    }
-
-    pub fn t_print(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "Print",
-            Language::Es => "Imprimir",
-        }
-    }
-
-    pub fn t_read(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "Read",
-            Language::Es => "Leer",
-        }
-    }
-
-    pub fn t_default(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "default",
-            Language::Es => "por defecto",
-        }
-    }
-
-    pub fn t_subroutine(lang: Language) -> &'static str {
-        match lang {
-            Language::En => "Subroutine",
-            Language::Es => "Subrutina",
+impl Language {
+    pub fn words(self) -> &'static Words {
+        match self {
+            Language::En => &EN,
+            Language::Es => &ES,
         }
     }
 }
+
+static EN: Words = Words {
+    yes: "True",
+    no: "False",
+    start: "Start",
+    end: "End",
+    ret: "Return",
+    print: "Print",
+    read: "Read",
+    default: "default",
+    and: "and",
+    or: "or",
+    not: "not",
+    always: "true",
+};
+
+static ES: Words = Words {
+    yes: "Verdadero",
+    no: "Falso",
+    start: "Inicio",
+    end: "Fin",
+    ret: "Retornar",
+    print: "Imprimir",
+    read: "Leer",
+    default: "por defecto",
+    and: "y",
+    or: "o",
+    not: "no",
+    always: "verdadero",
+};

@@ -1,0 +1,33 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: if_elseif_nested.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: i ← 0
+  - if:
+      cond: i = 0
+      then:
+      - io: 'Print "i: ", i'
+      - process: j ← 0
+      - if:
+          cond: j = 0
+          then:
+          - io: 'Print "j: ", j'
+          else:
+          - if:
+              cond: j = 1
+              then:
+              - io: 'Print "j == 1: ", j'
+      else:
+      - if:
+          cond: i = 1
+          then:
+          - io: 'Print "i == 1: ", i'
+  - io: Print "Fin"
+  - return: '0'

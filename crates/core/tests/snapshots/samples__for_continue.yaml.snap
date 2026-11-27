@@ -1,0 +1,21 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: for_continue.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - for:
+      init: i ← 0
+      cond: i < 10
+      update: i ← i + 1
+      body:
+      - if:
+          cond: i % 2 = 0
+          then:
+          - continue
+      - io: Print i
+  - return: '0'

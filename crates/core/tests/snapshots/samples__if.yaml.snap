@@ -1,0 +1,18 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: if.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: i ← 0
+  - if:
+      cond: i = 0
+      then:
+      - io: 'Print "i: ", i'
+  - io: Print "Fin"
+  - return: '0'

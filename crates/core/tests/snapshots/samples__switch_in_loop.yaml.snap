@@ -1,0 +1,37 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: switch_in_loop.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - for:
+      body:
+      - io: Read op
+      - switch:
+          expr: op
+          cases:
+          - values:
+            - '0'
+            body:
+            - return: '0'
+          - values:
+            - '1'
+            body:
+            - if:
+                cond: op > 0
+                then:
+                - break
+            - io: Print "never"
+            - break
+          - values:
+            - '2'
+            body:
+            - continue
+          - default: true
+            body:
+            - io: Print "?"
+      - io: Print "next"

@@ -1,0 +1,24 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+ (  Start: b()  )
+         │
+         🭭
+  *───────────────*
+ ╱   Print "b"   ╱
+*────────┬──────*
+         │
+         🭭
+   (  Return  )
+
+
+(  Start: a()  )
+        │
+        🭭
+ ┌─┬─────────┬─┐
+ │ │   b()   │ │
+ └─┴────┬────┴─┘
+        │
+        🭭
+  (  Return  )

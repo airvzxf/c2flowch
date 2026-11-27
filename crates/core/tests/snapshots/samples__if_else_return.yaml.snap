@@ -1,0 +1,27 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: if_else_return.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - call: s ← sign(3)
+  - return: '0'
+- name: sign
+  params:
+  - x
+  body:
+  - if:
+      cond: x > 0
+      then:
+      - return: '1'
+      else:
+      - if:
+          cond: x < 0
+          then:
+          - return: '-1'
+          else:
+          - return: '0'

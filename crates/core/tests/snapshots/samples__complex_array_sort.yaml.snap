@@ -1,0 +1,59 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: complex_array_sort.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: |-
+      data ← {64, 34, 25, 12, 22, 11, 90}
+      n ← 7
+  - io: 'Print "Unsorted array: "'
+  - call: print_array(data, n)
+  - call: bubble_sort(data, n)
+  - io: 'Print "Sorted array: "'
+  - call: print_array(data, n)
+  - return: '0'
+- name: print_array
+  params:
+  - arr
+  - size
+  body:
+  - for:
+      init: i ← 0
+      cond: i < size
+      update: i ← i + 1
+      body:
+      - io: Print arr[i], " "
+  - io: Print ""
+- name: bubble_sort
+  params:
+  - arr
+  - n
+  body:
+  - for:
+      init: i ← 0
+      cond: i < n - 1
+      update: i ← i + 1
+      body:
+      - for:
+          init: j ← 0
+          cond: j < n - i - 1
+          update: j ← j + 1
+          body:
+          - if:
+              cond: arr[j] > arr[j + 1]
+              then:
+              - call: swap(arr[j], arr[j + 1])
+- name: swap
+  params:
+  - a
+  - b
+  body:
+  - process: |-
+      temp ← a
+      a ← b
+      b ← temp

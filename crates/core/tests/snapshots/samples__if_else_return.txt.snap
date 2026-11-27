@@ -1,0 +1,37 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+      (  Start  )
+           │
+           🭭
+┌─┬─────────────────┬─┐
+│ │   s ← sign(3)   │ │
+└─┴────────┬────────┴─┘
+           │
+           🭭
+       (  End  )
+
+
+(  Start: sign(x)  )
+          │
+          🭭
+         🯐🯓
+       🯐    🯓
+     🯐        🯓  True
+    🯝  x > 0   🯟───────────────────────────────┐
+     🯒        🯑                                │
+       🯒    🯑                                  🭭
+         🯒🯑                             (  Return: 1  )
+   False  │
+          🭭
+         🯐🯓
+       🯐    🯓
+     🯐        🯓  True
+    🯝  x < 0   🯟─────────────┐
+     🯒        🯑              │
+       🯒    🯑                🭭
+         🯒🯑          (  Return: -1  )
+   False  │
+          🭭
+   (  Return: 0  )

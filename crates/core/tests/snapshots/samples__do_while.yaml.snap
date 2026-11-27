@@ -1,0 +1,19 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: do_while.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "Inicio"
+  - process: i ← 0
+  - do_while:
+      body:
+      - io: 'Print "While: ", i'
+      - process: i ← i + 1
+      cond: i < 5
+  - io: Print "Fin"
+  - return: '0'

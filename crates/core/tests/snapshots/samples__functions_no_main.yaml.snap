@@ -1,0 +1,13 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: functions_no_main.c
+lang: en
+functions:
+- name: b
+  body:
+  - io: Print "b"
+- name: a
+  body:
+  - call: b()

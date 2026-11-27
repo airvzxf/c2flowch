@@ -1,69 +1,126 @@
+//! Structured intermediate representation.
+//!
+//! The IR is a tree of statements that mirrors the control flow of the C
+//! source. It is what `c2flowch parse` writes as YAML and what
+//! `c2flowch render` reads back, so it is designed to be edited by hand:
+//! there are no node ids, no join nodes and no layout hints. Every text is
+//! the final label that will be printed inside a flowchart symbol.
+//!
+//! ```yaml
+//! title: example.c
+//! lang: en
+//! functions:
+//! - name: main
+//!   entry: true
+//!   body:
+//!   - process: i ← 0
+//!   - while:
+//!       cond: i < 5
+//!       body:
+//!       - io: Print i
+//!       - process: i ← i + 1
+//!   - return: null
+//! ```
+
 use crate::i18n::Language;
 use serde::{Deserialize, Serialize};
 
-pub const EDGE_LABEL_BREAK: &str = "__Break__";
-pub const EDGE_LABEL_DEPENDENCY: &str = "Dependency";
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub enum NodeType {
-    /// Start/End of a function or program
-    Terminator,
-    /// Simple operation (assignment, function call)
-    Process,
-    /// Function call (Predefined Process)
-    PredefinedProcess,
-    /// Condition (if, switch, while)
-    Decision,
-    /// A single case within a switch statement
-    SwitchCase,
-    /// Input/Output operation
-    InputOutput,
-    /// Variable declaration/initialization
-    Preparation,
-    /// A group of nodes (e.g. a whole function)
-    Subroutine,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FlowNode {
-    pub id: String,
-    pub node_type: NodeType,
-    pub text: String,
-    /// Optional metadata about the original source line
-    pub source_line: Option<usize>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FlowEdge {
-    pub from: String,
-    pub to: String,
-    pub label: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Flowchart {
+/// A whole C file: one flowchart per function.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Program {
     pub title: String,
     #[serde(default)]
     pub lang: Language,
-    pub nodes: Vec<FlowNode>,
-    pub edges: Vec<FlowEdge>,
-    #[serde(default)]
-    pub subroutines: Vec<Flowchart>,
+    pub functions: Vec<Function>,
 }
 
-impl Flowchart {
-    pub fn add_node(&mut self, node: FlowNode) {
-        self.nodes.push(node);
-    }
+/// One function, drawn as its own flowchart.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Function {
+    pub name: String,
+    /// Parameter names, shown in the start terminator of subroutines.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub params: Vec<String>,
+    /// The program entry point (`main`): its terminators read "Start"/"End"
+    /// instead of "Start: name(params)"/"Return".
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub entry: bool,
+    #[serde(with = "serde_yaml::with::singleton_map_recursive")]
+    pub body: Vec<Stmt>,
+}
 
-    pub fn add_edge(&mut self, from: &str, to: &str, label: Option<String>) {
-        self.edges.push(FlowEdge {
-            from: from.to_string(),
-            to: to.to_string(),
-            label,
-        });
-    }
+/// One statement. Simple statements hold the text of their symbol; a text
+/// may span several lines, and each line is printed on its own row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Stmt {
+    /// Process symbol (rectangle): assignments and other operations.
+    Process(String),
+    /// Data symbol (parallelogram): input and output.
+    Io(String),
+    /// Predefined process symbol: a call to a function of the same file.
+    Call(String),
+    /// Preparation symbol (hexagon): declarations without a value.
+    Prep(String),
+    If {
+        cond: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        then: Vec<Stmt>,
+        #[serde(default, rename = "else", skip_serializing_if = "Vec::is_empty")]
+        otherwise: Vec<Stmt>,
+    },
+    While {
+        cond: String,
+        #[serde(default)]
+        body: Vec<Stmt>,
+    },
+    DoWhile {
+        #[serde(default)]
+        body: Vec<Stmt>,
+        cond: String,
+    },
+    For {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        init: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cond: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        update: Option<String>,
+        #[serde(default)]
+        body: Vec<Stmt>,
+    },
+    Switch {
+        expr: String,
+        cases: Vec<Case>,
+    },
+    Break,
+    Continue,
+    /// `return`, with the returned expression if there is one.
+    Return(Option<String>),
+    /// `goto label`.
+    Goto(String),
+    /// A label that `goto` statements can jump to.
+    Label(String),
+}
 
+/// One branch of a `switch`. Consecutive `case` labels that share a body
+/// are merged into one branch. Without a trailing `break`, control falls
+/// through into the next branch, as in C.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Case {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub values: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub default: bool,
+    #[serde(default)]
+    pub body: Vec<Stmt>,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+impl Program {
     pub fn to_yaml(&self) -> Result<String, serde_yaml::Error> {
         serde_yaml::to_string(self)
     }

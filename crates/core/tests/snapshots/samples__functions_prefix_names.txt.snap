@@ -1,0 +1,25 @@
+---
+source: crates/core/tests/samples.rs
+expression: render_ascii(&p)
+---
+        (  Start  )
+             │
+             🭭
+┌─┬─────────────────────┬─┐
+│ │   r ← checksum(5)   │ │
+└─┴──────────┬──────────┴─┘
+             │
+             🭭
+         (  End  )
+
+
+(  Start: checksum(x)  )
+            │
+            🭭
+     (  Return: x  )
+
+
+(  Start: sum(a, b)  )
+           │
+           🭭
+  (  Return: a + b  )

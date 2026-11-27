@@ -1,0 +1,23 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: functions_recursive.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - process: num ← 5
+  - call: result ← factorial(num)
+  - io: Print "Factorial of ", num, " is ", result
+  - return: '0'
+- name: factorial
+  params:
+  - n
+  body:
+  - if:
+      cond: n ≤ 1
+      then:
+      - return: '1'
+  - return: n * factorial(n - 1)

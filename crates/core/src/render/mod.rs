@@ -1,7 +1,4 @@
-pub mod canvas;
-pub mod layout;
-pub mod routing;
-pub mod shapes;
-pub mod svg;
+//! Renderers. Both draw the same [`Diagram`](crate::layout::geom::Diagram).
 
-pub use layout::{render_flowchart, render_svg};
+pub mod ascii;
+pub mod svg;

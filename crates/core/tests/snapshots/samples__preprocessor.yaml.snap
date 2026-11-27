@@ -1,0 +1,15 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: preprocessor.c
+lang: en
+functions:
+- name: main
+  entry: true
+  body:
+  - io: Print "debug"
+  - for:
+      body:
+      - break
+  - return: '0'
