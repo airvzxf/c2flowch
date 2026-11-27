@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# The C library shims that tree-sitter-language 0.1.7 provides for
+# wasm32-unknown-unknown trip this warning, which recent clang versions
+# turn into an error. tree-sitter itself already builds with it off.
+[env]
+CFLAGS_wasm32_unknown_unknown = "-Wno-incompatible-pointer-types"

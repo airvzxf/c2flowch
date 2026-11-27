@@ -145,12 +145,45 @@ let text = render_ascii(&parsed.program);
 let svg = render_svg(&parsed.program);
 ```
 
+## WebAssembly
+
+`c2flowch-wasm` exposes the same steps to JavaScript, in a browser or
+Node.js. Each release has a `c2flowch-wasm-vX.Y.Z.tar.gz` with the package
+for the web; to build it yourself:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version <the wasm-bindgen version in Cargo.lock> --locked
+bash scripts/build-wasm.bash                 # web/pkg, for browsers
+bash scripts/build-wasm.bash nodejs out/     # for Node.js
+```
+
+The C grammar is compiled with `clang`, which must be installed.
+
+```js
+import init, { parse, parseFiles, render, validate, version } from "./pkg/c2flowch_wasm.js";
+
+await init();
+const parsed = parse(code, "main.c", 3, "en"); // code, title, level 1-5, en|es
+console.log(parsed.warnings);                  // ["main.c:line 4: ..."]
+const svg = render(parsed.yaml, "svg");        // or "ascii"
+const multi = parseFiles(["a.c", "b.c"], [codeA, codeB], 3, "en");
+```
+
+Functions take and return the YAML text of a program, so it can be edited
+between the steps; errors are thrown as `Error`. The `web/` directory is a
+demo page: after `build-wasm.bash`, serve it with any static file server
+(`python3 -m http.server -d web`) and open it.
+
 ## Development
 
 ```bash
 cargo test                      # unit, snapshot and CLI tests
 cargo insta review              # review changed snapshots
 bash scripts/pipeline.bash      # render every file of resources/c
+bash scripts/build-wasm.bash nodejs target/wasm-node \
+  && cargo build && node scripts/wasm-smoke.mjs target/wasm-node target/debug/c2flowch
+                                # WebAssembly gives the same drawings
 ```
 
 Every file in `resources/c` is a test case: its YAML and text drawing are

@@ -58,8 +58,9 @@ The core library does no I/O, ready for a WebAssembly build.
       tests.
 - [x] Colored terminal output: `render --color auto|always|never`.
 - [x] Multiple files: `parse a.c b.c ...` follows calls into the other files.
+- [x] WebAssembly: the `c2flowch-wasm` crate exposes parse and render to
+      JavaScript, with a browser demo in `web/`.
 
 ### Next
 
-- [ ] **WebAssembly:** a `c2flowch-wasm` crate exposing parse and render to
-      the browser.
+Nothing planned; ideas and bug reports are welcome as issues.
