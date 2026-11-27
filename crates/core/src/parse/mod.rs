@@ -76,7 +76,8 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
     syntax_errors(root, &mut warnings);
 
     let mut defs = Vec::new();
-    collect_functions(root, code, &mut defs);
+    let mut global_decls = Vec::new();
+    collect_functions(root, code, &mut defs, &mut global_decls);
     let known: HashSet<String> = defs.iter().map(|d| d.name.clone()).collect();
 
     let order = function_order(&defs, code, &known);
@@ -88,6 +89,12 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
         known: &known,
         warnings,
     };
+
+    let mut globals = Vec::new();
+    for d in global_decls {
+        conv.declaration(d, &mut globals);
+    }
+    let globals = detail::apply(globals, opts.level);
 
     let mut functions = Vec::new();
     for i in order {
@@ -108,6 +115,7 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
         program: Program {
             title: opts.title.clone(),
             lang: opts.lang,
+            globals,
             functions,
         },
         warnings,
@@ -138,8 +146,14 @@ fn syntax_errors(root: Node, out: &mut Vec<Warning>) {
     }
 }
 
-/// Function definitions at file level, also inside `#if` blocks.
-fn collect_functions<'t>(n: Node<'t>, src: &str, out: &mut Vec<FunctionDef<'t>>) {
+/// Function definitions and variable declarations at file level, also
+/// inside `#if` blocks.
+fn collect_functions<'t>(
+    n: Node<'t>,
+    src: &str,
+    out: &mut Vec<FunctionDef<'t>>,
+    globals: &mut Vec<Node<'t>>,
+) {
     let mut c = n.walk();
     for child in n.named_children(&mut c) {
         match child.kind() {
@@ -174,7 +188,8 @@ fn collect_functions<'t>(n: Node<'t>, src: &str, out: &mut Vec<FunctionDef<'t>>)
                     body,
                 });
             }
-            k if k.starts_with("preproc_") => collect_functions(child, src, out),
+            "declaration" => globals.push(child),
+            k if k.starts_with("preproc_") => collect_functions(child, src, out, globals),
             _ => {}
         }
     }
@@ -587,6 +602,27 @@ mod tests {
             one(r#"char *s = "int x = 5; printf(";"#),
             Stmt::Process(r#"s <- "int x = 5; printf(""#.into())
         );
+    }
+
+    #[test]
+    fn globals_are_file_scope_declarations() {
+        let opts = ParseOptions {
+            level: 5,
+            ..Default::default()
+        };
+        let code = "int n = 1, m;\nint f(int);\n#ifdef X\nchar c;\n#endif\nint main() { int k; }";
+        let p = parse(code, &opts).unwrap().program;
+        assert_eq!(
+            p.globals,
+            vec![
+                Stmt::Process("n <- 1".into()),
+                Stmt::Prep("int m".into()),
+                Stmt::Prep("char c".into()),
+            ]
+        );
+        assert_eq!(p.functions[0].body, vec![Stmt::Prep("int k".into())]);
+        let yaml = p.to_yaml().unwrap();
+        assert_eq!(Program::from_yaml(&yaml).unwrap(), p);
     }
 
     #[test]

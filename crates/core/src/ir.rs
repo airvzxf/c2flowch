@@ -32,6 +32,15 @@ pub struct Program {
     pub title: String,
     #[serde(default)]
     pub lang: Language,
+    /// File-scope variables, drawn at the start of the entry point (`main`),
+    /// right after its start terminator. Only declarations are expected
+    /// here: `prep`, `process`, `io` or `call` statements.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        with = "serde_norway::with::singleton_map_recursive"
+    )]
+    pub globals: Vec<Stmt>,
     pub functions: Vec<Function>,
 }
 

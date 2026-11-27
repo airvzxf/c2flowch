@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0
+
+### Added
+
+- Global variables: declarations outside of any function are kept in a
+  new optional `globals` list of the YAML and drawn at the start of
+  `main`, right after its start terminator. They follow `--level` like
+  local declarations: a global with a value is a process from level 3,
+  one without a value is a preparation from level 4. Function prototypes
+  are still ignored, and YAML files without `globals` read as before.
+
 ## 2.1.0
 
 ### Added

@@ -1,0 +1,28 @@
+---
+source: crates/core/tests/samples.rs
+expression: p.to_yaml().unwrap()
+---
+title: globals.c
+lang: en
+globals:
+- process: |-
+    counter <- 0
+    rate <- 1.5
+    name <- "c2flowch"
+functions:
+- name: main
+  entry: true
+  body:
+  - for:
+      init: i <- 0
+      cond: i < LIMIT
+      update: i <- i + 1
+      body:
+      - process: |-
+          counter <- counter + 1
+          total <- total + rate
+  - call: report()
+  - return: '0'
+- name: report
+  body:
+  - io: 'Print name, ": ", counter'

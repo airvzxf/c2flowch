@@ -72,6 +72,18 @@ functions:
 A `switch` case is `{values: [...], default: true|false, body: [...]}`.
 Without a trailing `break`, it falls through into the next case, as in C.
 
+Variables declared outside of any function go in an optional `globals`
+list, next to `functions`, with the same statements (`process`, `prep`,
+...). They are drawn at the start of the entry point (`main`), right after
+its start terminator, and follow the `--level` filter like any other
+declaration:
+
+```yaml
+globals:
+- process: counter <- 0
+- prep: int values[LIMIT]
+```
+
 ## Usage
 
 ```bash
