@@ -89,6 +89,7 @@ globals:
 ```bash
 # 1. C -> YAML (writes main.yaml)
 c2flowch parse main.c --lang es --level 3
+c2flowch parse main.c list.c util.c       # one program in several files
 
 # 2. YAML -> drawing
 c2flowch render main.yaml                          # text, to the terminal

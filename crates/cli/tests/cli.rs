@@ -151,6 +151,35 @@ fn warns_about_what_cannot_be_drawn() {
 }
 
 #[test]
+fn parses_several_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let main = dir.path().join("main.c");
+    let lib = dir.path().join("lib.c");
+    fs::write(
+        &main,
+        "int twice(int x);\nint main() { int y = twice(2); return y; }\n",
+    )
+    .unwrap();
+    fs::write(
+        &lib,
+        "int twice(int x) { return 2 * x; }\nint bad() { x = ; }\n",
+    )
+    .unwrap();
+    cmd()
+        .args(["parse", main.to_str().unwrap(), lib.to_str().unwrap()])
+        .assert()
+        .success()
+        .stderr(predicate::str::contains(format!(
+            "warning: {}:line 2:",
+            lib.display()
+        )));
+    let text = fs::read_to_string(dir.path().join("main.yaml")).unwrap();
+    assert!(text.contains("title: main.c, lib.c"), "{text}");
+    assert!(text.contains("name: twice"), "{text}");
+    assert!(text.contains("call: y <- twice(2)"), "{text}");
+}
+
+#[test]
 fn rejects_unknown_language() {
     cmd()
         .args(["parse", "x.c", "--lang", "fr"])

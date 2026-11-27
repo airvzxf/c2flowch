@@ -34,6 +34,9 @@ impl Default for ParseOptions {
 /// Something in the source that c2flowch could not draw faithfully.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Warning {
+    /// Name of the source the line belongs to ([`Source::name`]; the
+    /// title for [`parse`]).
+    pub file: String,
     /// 1-based source line.
     pub line: usize,
     pub message: String,
@@ -43,6 +46,14 @@ impl std::fmt::Display for Warning {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "line {}: {}", self.line, self.message)
     }
+}
+
+/// One C source file given to [`parse_files`].
+#[derive(Debug, Clone, Copy)]
+pub struct Source<'a> {
+    /// Name used in warnings, usually the path of the file.
+    pub name: &'a str,
+    pub code: &'a str,
 }
 
 /// Result of [`parse`].
@@ -56,6 +67,8 @@ struct FunctionDef<'t> {
     name: String,
     params: Vec<String>,
     body: Node<'t>,
+    /// Index of the source that defines it.
+    file: usize,
 }
 
 /// Parses C source code into a [`Program`].
@@ -65,33 +78,78 @@ struct FunctionDef<'t> {
 /// other function of the file. Without `main`, functions keep their order
 /// in the file.
 pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
+    parse_files(
+        &[Source {
+            name: &opts.title,
+            code,
+        }],
+        opts,
+    )
+}
+
+/// Parses several C source files of one program into a single [`Program`],
+/// as [`parse`] does for one file: a call to a function defined in any of
+/// the files is a call symbol, and every function gets its own flowchart.
+/// Functions keep the order of [`parse`], with the files in the order
+/// given; the file-scope variables of every file are drawn in `main`.
+///
+/// When two files define a function with the same name (for example two
+/// `static` helpers), only the first one is kept, with a warning.
+pub fn parse_files(sources: &[Source], opts: &ParseOptions) -> Result<Parsed> {
     let mut parser = Parser::new();
     parser
         .set_language(&tree_sitter_c::LANGUAGE.into())
         .context("loading the C grammar")?;
-    let tree = parser.parse(code, None).context("parsing the C source")?;
-    let root = tree.root_node();
+    let mut trees = Vec::new();
+    for s in sources {
+        trees.push(
+            parser
+                .parse(s.code, None)
+                .with_context(|| format!("parsing {}", s.name))?,
+        );
+    }
 
     let mut warnings = Vec::new();
-    syntax_errors(root, &mut warnings);
-
     let mut defs = Vec::new();
     let mut global_decls = Vec::new();
-    collect_functions(root, code, &mut defs, &mut global_decls);
+    for (file, (s, tree)) in sources.iter().zip(&trees).enumerate() {
+        let root = tree.root_node();
+        syntax_errors(root, s.name, &mut warnings);
+        let mut found = Vec::new();
+        let mut decls = Vec::new();
+        collect_functions(root, s.code, file, &mut found, &mut decls);
+        global_decls.extend(decls.into_iter().map(|d| (file, d)));
+        for def in found {
+            if let Some(first) = defs.iter().find(|d: &&FunctionDef| d.name == def.name) {
+                warnings.push(Warning {
+                    file: s.name.to_string(),
+                    line: def.body.start_position().row + 1,
+                    message: format!(
+                        "function `{}` is already defined in {}; this one is skipped",
+                        def.name, sources[first.file].name
+                    ),
+                });
+            } else {
+                defs.push(def);
+            }
+        }
+    }
     let known: HashSet<String> = defs.iter().map(|d| d.name.clone()).collect();
 
-    let order = function_order(&defs, code, &known);
+    let order = function_order(&defs, sources, &known);
     let mut conv = Converter {
         text: Text {
-            src: code,
+            src: "",
             words: opts.lang.words(),
         },
+        file: "",
         known: &known,
         warnings,
     };
 
     let mut globals = Vec::new();
-    for d in global_decls {
+    for (file, d) in global_decls {
+        conv.open(&sources[file]);
         conv.declaration(d, &mut globals);
     }
     let globals = detail::apply(globals, opts.level);
@@ -99,6 +157,7 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
     let mut functions = Vec::new();
     for i in order {
         let def = &defs[i];
+        conv.open(&sources[def.file]);
         let body = conv.block(def.body);
         functions.push(Function {
             name: def.name.clone(),
@@ -109,7 +168,8 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
     }
 
     let mut warnings = conv.warnings;
-    warnings.sort_by_key(|w| w.line);
+    let file_index = |w: &Warning| sources.iter().position(|s| s.name == w.file);
+    warnings.sort_by_key(|w| (file_index(w), w.line));
     warnings.dedup();
     Ok(Parsed {
         program: Program {
@@ -122,7 +182,7 @@ pub fn parse(code: &str, opts: &ParseOptions) -> Result<Parsed> {
     })
 }
 
-fn syntax_errors(root: Node, out: &mut Vec<Warning>) {
+fn syntax_errors(root: Node, file: &str, out: &mut Vec<Warning>) {
     if !root.has_error() {
         return;
     }
@@ -130,6 +190,7 @@ fn syntax_errors(root: Node, out: &mut Vec<Warning>) {
     while let Some(n) = stack.pop() {
         if n.is_error() || n.is_missing() {
             out.push(Warning {
+                file: file.to_string(),
                 line: n.start_position().row + 1,
                 message: if n.is_missing() {
                     format!("syntax error: missing `{}`", n.kind())
@@ -151,6 +212,7 @@ fn syntax_errors(root: Node, out: &mut Vec<Warning>) {
 fn collect_functions<'t>(
     n: Node<'t>,
     src: &str,
+    file: usize,
     out: &mut Vec<FunctionDef<'t>>,
     globals: &mut Vec<Node<'t>>,
 ) {
@@ -186,13 +248,21 @@ fn collect_functions<'t>(
                     name: src[name.byte_range()].to_string(),
                     params,
                     body,
+                    file,
                 });
             }
-            "declaration" => globals.push(child),
-            k if k.starts_with("preproc_") => collect_functions(child, src, out, globals),
+            // `extern` only refers to a variable defined elsewhere.
+            "declaration" if !is_extern(child, src) => globals.push(child),
+            k if k.starts_with("preproc_") => collect_functions(child, src, file, out, globals),
             _ => {}
         }
     }
+}
+
+fn is_extern(n: Node, src: &str) -> bool {
+    named_children(n)
+        .iter()
+        .any(|c| c.kind() == "storage_class_specifier" && &src[c.byte_range()] == "extern")
 }
 
 fn function_declarator(mut n: Node) -> Option<Node> {
@@ -216,7 +286,7 @@ fn declared_name(mut n: Node) -> Option<Node> {
 }
 
 /// Indices into `defs`: main, what it calls (breadth first), the rest.
-fn function_order(defs: &[FunctionDef], src: &str, known: &HashSet<String>) -> Vec<usize> {
+fn function_order(defs: &[FunctionDef], sources: &[Source], known: &HashSet<String>) -> Vec<usize> {
     let index: HashMap<&str, usize> = defs
         .iter()
         .enumerate()
@@ -230,7 +300,7 @@ fn function_order(defs: &[FunctionDef], src: &str, known: &HashSet<String>) -> V
         while let Some(i) = queue.pop_front() {
             order.push(i);
             let mut calls = Vec::new();
-            collect_calls(defs[i].body, src, known, &mut calls);
+            collect_calls(defs[i].body, sources[defs[i].file].code, known, &mut calls);
             for name in calls {
                 let j = index[name.as_str()];
                 if seen.insert(j) {
@@ -247,7 +317,7 @@ fn function_order(defs: &[FunctionDef], src: &str, known: &HashSet<String>) -> V
     order
 }
 
-/// Calls to functions of the file, in source order.
+/// Calls to functions of the program, in source order.
 fn collect_calls(n: Node, src: &str, known: &HashSet<String>, out: &mut Vec<String>) {
     if let Some(name) = callee(n, src)
         && known.contains(name)
@@ -262,13 +332,21 @@ fn collect_calls(n: Node, src: &str, known: &HashSet<String>, out: &mut Vec<Stri
 
 struct Converter<'a> {
     text: Text<'a>,
+    /// Name of the source being converted, for warnings.
+    file: &'a str,
     known: &'a HashSet<String>,
     warnings: Vec<Warning>,
 }
 
-impl Converter<'_> {
+impl<'a> Converter<'a> {
+    fn open(&mut self, source: &Source<'a>) {
+        self.text.src = source.code;
+        self.file = source.name;
+    }
+
     fn warn(&mut self, n: Node, message: impl Into<String>) {
         self.warnings.push(Warning {
+            file: self.file.to_string(),
             line: n.start_position().row + 1,
             message: message.into(),
         });
@@ -729,5 +807,81 @@ mod tests {
     fn syntax_errors_are_reported() {
         let p = parse("int main() { x = ; }", &ParseOptions::default()).unwrap();
         assert!(!p.warnings.is_empty());
+    }
+
+    #[test]
+    fn calls_into_other_files() {
+        let main = "extern int total;\nint main() { total = add(1, 2); show(); }";
+        let lib = "int total = 0;\nint add(int a, int b) { return a + b; }\n\
+                   void show(void) { log_it(); }\nstatic void log_it(void) {}";
+        let p = parse_files(
+            &[
+                Source {
+                    name: "main.c",
+                    code: main,
+                },
+                Source {
+                    name: "lib.c",
+                    code: lib,
+                },
+            ],
+            &ParseOptions::default(),
+        )
+        .unwrap();
+        let names: Vec<&str> = p
+            .program
+            .functions
+            .iter()
+            .map(|f| f.name.as_str())
+            .collect();
+        assert_eq!(names, ["main", "add", "show", "log_it"]);
+        assert_eq!(
+            p.program.functions[0].body,
+            [
+                Stmt::Call("total <- add(1, 2)".into()),
+                Stmt::Call("show()".into())
+            ]
+        );
+        // The extern declaration is not drawn, the definition is.
+        assert_eq!(p.program.globals, [Stmt::Process("total <- 0".into())]);
+        assert!(p.warnings.is_empty(), "{:?}", p.warnings);
+    }
+
+    #[test]
+    fn duplicate_functions_keep_the_first() {
+        let a = Source {
+            name: "a.c",
+            code: "static int f(void) { return 1; }",
+        };
+        let b = Source {
+            name: "b.c",
+            code: "\nstatic int f(void) { return 2; }\nint g(void) { x = ; }",
+        };
+        let p = parse_files(&[b, a], &ParseOptions::default()).unwrap();
+        assert_eq!(p.program.functions.len(), 2);
+        assert_eq!(
+            p.program.functions[0].body,
+            [Stmt::Return(Some("2".into()))]
+        );
+        let dup = p
+            .warnings
+            .iter()
+            .find(|w| w.message.contains("already"))
+            .unwrap();
+        assert_eq!((dup.file.as_str(), dup.line), ("a.c", 1));
+        // Warnings follow the order of the files.
+        assert_eq!(p.warnings.last().unwrap().file, "a.c");
+        let p = parse_files(&[a, b], &ParseOptions::default()).unwrap();
+        assert_eq!(
+            p.program.functions[0].body,
+            [Stmt::Return(Some("1".into()))]
+        );
+        let dup = p
+            .warnings
+            .iter()
+            .find(|w| w.message.contains("already"))
+            .unwrap();
+        assert_eq!((dup.file.as_str(), dup.line), ("b.c", 2));
+        assert!(dup.message.contains("a.c"), "{dup}");
     }
 }
