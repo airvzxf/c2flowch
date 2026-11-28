@@ -22,5 +22,10 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      # Pinned in crates/wasm/Cargo.toml: 0.1.8 and later only build for
+      # wasm32-unknown-unknown with tree-sitter 0.27. It moves together
+      # with tree-sitter and tree-sitter-c, by hand.
+      - dependency-name: tree-sitter-language
     commit-message:
       prefix: build
