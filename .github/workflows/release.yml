@@ -188,5 +188,11 @@ jobs:
             exit 1
           fi
           echo "✓ unknown paths answer 404"
+          csp="$(curl -fsS --max-time 20 -o /dev/null -D - "${SITE}/" | grep -i '^content-security-policy:' || true)"
+          if ! grep -q "frame-ancestors 'none'" <<<"${csp}"; then
+            echo "::error::${SITE}/ does not send the Content-Security-Policy of web/src/_headers"
+            exit 1
+          fi
+          echo "✓ ${csp%$'\r'}"
         env:
           GH_TOKEN: ${{ github.token }}

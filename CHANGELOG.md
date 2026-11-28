@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- The demo sends a Content-Security-Policy and other security headers
+  (`web/src/_headers`): it runs only its own scripts and WebAssembly,
+  fetches only its own files and cannot be framed.
+
 ## 2.5.1
 
 ### Added
