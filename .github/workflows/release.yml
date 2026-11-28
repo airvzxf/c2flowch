@@ -2,8 +2,10 @@
 #
 # Builds the c2flowch binary for each platform and the WebAssembly
 # package, attaches the archives to the GitHub release and deploys the
-# browser demo (web/) to GitHub Pages when enabled (see the pages job). Runs when a release is published, or by hand for
-# an existing tag.
+# browser demo (web/) to GitHub Pages when enabled (see the pages job).
+# On a published release it also checks the demo on Cloudflare Pages
+# (see the verify-deployment job). Runs when a release is published, or
+# by hand for an existing tag.
 name: Release
 
 on:
@@ -133,3 +135,58 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v5
+
+  # Cloudflare Pages deploys the main branch on its own; this job only
+  # checks that https://c2flowch.rovisoft.net serves the released version.
+  # The page asks for its files with ?v=<version>-<commit>, so the job
+  # waits until that version appears and then fetches every asset by the
+  # URL the page uses. Only on a published release: a manual run for an
+  # older tag would legitimately find a newer version in production.
+  verify-deployment:
+    name: Verify · production serves the release
+    needs: wasm
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SITE: https://c2flowch.rovisoft.net
+    steps:
+      - name: Wait for the released version and fetch its assets
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          stamp=""
+          for attempt in $(seq 1 30); do
+            page="$(curl -fsS --max-time 20 "${SITE}/?release=${version}" || true)"
+            stamp="$(grep -oE "app\.js\?v=${version//./\\.}-[0-9a-f]+" <<<"${page}" | head -1 | cut -d= -f2 || true)"
+            if [ -n "${stamp}" ]; then
+              echo "✓ ${SITE}/ serves ${stamp} (attempt ${attempt})"
+              break
+            fi
+            echo "attempt ${attempt}: production does not serve ${version} yet"
+            sleep 30
+          done
+          if [ -z "${stamp}" ]; then
+            echo "::error::${SITE}/ still does not serve version ${version} after 15 minutes. Check the Cloudflare Pages deployment of main."
+            exit 1
+          fi
+          tag_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" -q .sha)"
+          if [ "${stamp#*-}" != "${tag_commit:0:7}" ]; then
+            echo "::notice::Production serves commit ${stamp#*-}, not the tag commit ${tag_commit:0:7}: main moved after the tag."
+          fi
+          for path in style.css app.js favicon.svg pkg/c2flowch_wasm.js pkg/c2flowch_wasm_bg.wasm examples/if.c; do
+            type="$(curl -fsS --max-time 20 -o /dev/null -w '%{content_type}' "${SITE}/${path}?v=${stamp}")"
+            case "${path}:${type}" in
+              *.css:text/css* | *.js:*javascript* | *.svg:image/svg+xml* | *.wasm:application/wasm* | *.c:text/*) echo "✓ /${path} (${type})" ;;
+              *) echo "::error::/${path}?v=${stamp} answered ${type}"; exit 1 ;;
+            esac
+          done
+          code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "${SITE}/no-such-page")"
+          if [ "${code}" != 404 ]; then
+            echo "::error::${SITE}/no-such-page answered ${code}, expected 404"
+            exit 1
+          fi
+          echo "✓ unknown paths answer 404"
+        env:
+          GH_TOKEN: ${{ github.token }}

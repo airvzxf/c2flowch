@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+  <style>
+    path, rect { fill: none; stroke: #2557d6; stroke-width: 2.5; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { path, rect { stroke: #7aa2ff; } }
+  </style>
+  <rect x="9" y="2" width="14" height="6" rx="3"/>
+  <path d="M16 8v4M16 12l8 6-8 6-8-6zM16 24v3M10 27h12"/>
+</svg>

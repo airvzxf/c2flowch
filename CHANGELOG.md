@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `scripts/cloudflare-build.bash` builds the browser demo on a machine
+  that only has `cc`, `curl` and `tar`, such as the Cloudflare Pages
+  build image. The demo is online at <https://c2flowch.rovisoft.net/>.
+- The demo has an icon, a description and Open Graph tags for link
+  previews, and a "Page not found" page for unknown paths.
+- The release workflow checks that <https://c2flowch.rovisoft.net/>
+  serves the released version.
+
+### Fixed
+
+- Browsers and caches no longer keep old files of the demo after a
+  deployment: every asset URL carries `?v=<version>-<commit>`.
+
 ## 2.5.0
 
 ### Added

@@ -4,8 +4,6 @@ resources/yaml*
 resources/svg*
 resources/png*
 resources/c/*.y*ml
-web/pkg/
-web/examples/
-web/index.html
-web/app.js
-web/style.css
+# web/ is generated from web/src by scripts/build-wasm.bash
+web/*
+!web/src/
