@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import init, { parse, render, validate, version } from "./pkg/c2flowch_wasm.js";
+import init, { parse, render, validate, version } from "./pkg/c2flowch_wasm.js?v=__VERSION__";
 
 // Copied from resources/c by scripts/build-wasm.bash.
 const EXAMPLES = [
@@ -92,13 +92,13 @@ function download() {
 }
 
 async function loadExample(name) {
-  const res = await fetch(`examples/${name}`);
+  const res = await fetch(`examples/${name}?v=__VERSION__`);
   if (!res.ok) throw new Error(`examples/${name}: ${res.status}`);
   code.value = await res.text();
   fromCode();
 }
 
-await init();
+await init({ module_or_path: new URL("./pkg/c2flowch_wasm_bg.wasm?v=__VERSION__", import.meta.url) });
 $("version").textContent = `v${version()}`;
 for (const name of EXAMPLES) $("example").append(new Option(name, name));
 $("example").addEventListener("change", () => loadExample($("example").value).catch(showError));

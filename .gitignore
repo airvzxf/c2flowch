@@ -6,3 +6,6 @@ resources/png*
 resources/c/*.y*ml
 web/pkg/
 web/examples/
+web/index.html
+web/app.js
+web/style.css

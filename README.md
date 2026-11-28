@@ -175,8 +175,11 @@ const multi = parseFiles(["a.c", "b.c"], [codeA, codeB], 3, "en");
 
 Functions take and return the YAML text of a program, so it can be edited
 between the steps; errors are thrown as `Error`. The `web/` directory is a
-demo page: after `build-wasm.bash`, serve it with any static file server
-(`python3 -m http.server -d web`) and open it.
+demo page: `build-wasm.bash` writes it from the sources in `web/src`, then
+serve it with any static file server (`python3 -m http.server -d web`) and
+open it. Every asset URL of the page carries `?v=<version>-<commit>`, such
+as `?v=2.5.0-c209660`, so browsers and caches fetch the new files after
+each deployment, whatever cache lifetime the server sends.
 
 The demo is deployed to GitHub Pages by the release workflow. To host it
 elsewhere, `scripts/cloudflare-build.bash` builds `web/` on a machine that
