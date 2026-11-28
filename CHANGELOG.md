@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- PNG output uses resvg 0.50, which shapes and reads fonts with
+  harfrust and skrifa instead of the unmaintained rustybuzz and
+  ttf-parser (RUSTSEC-2026-0206, RUSTSEC-2026-0192). The 36 samples
+  render to the same PNG bytes as with resvg 0.47.
+
+### Security
+
+- memmap2 0.9.12 and rustix 1.1.6 fix RUSTSEC-2026-0186 and
+  RUSTSEC-2026-0486.
+- CI runs `cargo audit --deny warnings` on every pull request, on
+  `main` and once a week.
+
 ## 2.5.2
 
 ### Added
