@@ -10,6 +10,7 @@ resolver = "2"
 version = "2.5.3"
 authors = ["Israel Alberto Roldan Vega"]
 edition = "2024"
+rust-version = "1.88"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/airvzxf/c2flowch"
 

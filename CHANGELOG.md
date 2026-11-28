@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Release archives carry a build provenance attestation:
+  `gh attestation verify <file> -R airvzxf/c2flowch` checks that the
+  release workflow of this repository built them. The README has a new
+  "Install" section that shows how.
+- `rust-version = "1.88"`: Cargo reports the minimum Rust version
+  instead of a compile error, and CI tests the workspace with it.
+
+### Security
+
+- The workflows pin every GitHub Action to a commit SHA; Dependabot
+  keeps the SHAs up to date.
+
 ## 2.5.3
 
 ### Changed
