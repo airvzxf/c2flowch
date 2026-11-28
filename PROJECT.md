@@ -64,3 +64,22 @@ The core library does no I/O, ready for a WebAssembly build.
 ### Next
 
 Nothing planned; ideas and bug reports are welcome as issues.
+
+## Pinned dependencies
+
+`crates/wasm/Cargo.toml` pins `tree-sitter-language = "=0.1.7"`, and
+`tree-sitter` stays on 0.26. Dependabot ignores both
+(`.github/dependabot.yml`), so they are updated by hand.
+
+- tree-sitter-c 0.24.2 compiles the C library shims of
+  tree-sitter-language for `wasm32-unknown-unknown`.
+- tree-sitter-language 0.1.8 and later ship those shims only for
+  tree-sitter 0.27 and stop the build with tree-sitter 0.26.
+- tree-sitter 0.27 needs tree-sitter-language 0.1.9 or later, and with
+  it tree-sitter-c 0.24.2 does not build for wasm32 either (checked with
+  tree-sitter 0.27.2 and tree-sitter-language 0.1.9).
+
+Remove the pin when a tree-sitter-c release supports tree-sitter 0.27:
+update `tree-sitter`, `tree-sitter-c` and `tree-sitter-language`
+together, then check that `scripts/build-wasm.bash` and the CI
+WebAssembly job pass, and remove the two `ignore` entries.

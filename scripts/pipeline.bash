@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# pipeline.bash - Procesa todos los archivos C a diagramas de flujo (Multiprocesamiento)
+# pipeline.bash - Turns every C sample into flowcharts, in parallel
 #
 set -euo pipefail
 
-# Obtener el directorio donde reside el script y cambiar al directorio raíz del proyecto
+# Run from the project root, wherever the script is called from
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 cd "${PROJECT_ROOT}"
 
-# Configuración de rutas
+# Paths
 C_DIR="resources/c"
 YAML_DIR="resources/yaml"
 ASCII_DIR="resources/ascii"
@@ -21,7 +21,7 @@ PNG_DIR="resources/png"
 PNG_SPLIT_DIR="resources/png-split"
 BIN="./target/release/c2flowch"
 
-# Función para procesar un solo archivo
+# Processes one C file
 process_file() {
     local c_file="${1}"
     local base_name
@@ -35,11 +35,11 @@ process_file() {
     local png_output="${PNG_DIR}/${base_name}.png"
     local png_split_output="${PNG_SPLIT_DIR}/${base_name}.png"
 
-    echo "Procesando: ${base_name}"
+    echo "Processing: ${base_name}"
 
-    # 1. Parseo: C -> YAML
+    # 1. Parse: C -> YAML
     if "${BIN}" parse "${c_file}" --output "${yaml_output}" --lang es > /dev/null 2>&1; then
-        # Renderizado: YAML -> Otros formatos
+        # Render: YAML -> the other formats
 
         # ASCII
         "${BIN}" render "${yaml_output}" --output "${ascii_output}" > /dev/null 2>&1
@@ -65,42 +65,42 @@ process_file() {
             return 1
         fi
     else
-        echo "  [ERROR] Falló el parseo: ${c_file}"
+        echo "  [ERROR] Parsing failed: ${c_file}"
         return 1
     fi
 }
 
-# Exportar variables y función para que xargs pueda usarlas en subshells de bash
+# Export the variables and the function for the bash subshells started by xargs
 export -f process_file
 export BIN YAML_DIR ASCII_DIR ASCII_SPLIT_DIR SVG_DIR SVG_SPLIT_DIR PNG_DIR PNG_SPLIT_DIR
 
-# Si se llama con --single, procesar solo un archivo (invocado por xargs)
+# With --single, process one file only (xargs calls the script this way)
 if [[ "${1:-}" == "--single" ]]; then
     process_file "${2}"
     exit 0
 fi
 
-# --- Flujo Principal ---
+# --- Main ---
 
-# Limpiar y crear directorios
+# Recreate the output directories
 rm -fR "${YAML_DIR}" "${ASCII_DIR}" "${ASCII_SPLIT_DIR}" "${SVG_DIR}" "${SVG_SPLIT_DIR}" "${PNG_DIR}" "${PNG_SPLIT_DIR}"
 mkdir -p "${YAML_DIR}" "${ASCII_DIR}" "${ASCII_SPLIT_DIR}" "${SVG_DIR}" "${SVG_SPLIT_DIR}" "${PNG_DIR}" "${PNG_SPLIT_DIR}"
 
-echo "=== Compilando C2Flowch (Release) ==="
+echo "=== Building c2flowch (release) ==="
 cargo build --release --quiet
 
-echo "=== Iniciando Pipeline de C2Flowch (Multiprocesamiento) ==="
+echo "=== Running the c2flowch pipeline (parallel) ==="
 CORES=$(nproc 2>/dev/null || echo 4)
-echo "Usando ${CORES} núcleos..."
+echo "Using ${CORES} cores..."
 
-# Medir tiempo total
+# Total time
 start_time=$(date +%s)
 
-# Buscar archivos .c y pasarlos a xargs para procesamiento en paralelo
+# Find the .c files and process them in parallel with xargs
 find "${C_DIR}" -name "*.c" -print0 | xargs -0 -I {} -P "${CORES}" bash "${0}" --single "{}"
 
 end_time=$(date +%s)
 duration=$((end_time - start_time))
 
 echo "------------------------------------------------"
-echo "=== Proceso finalizado en ${duration} segundos ==="
+echo "=== Finished in ${duration} seconds ==="
