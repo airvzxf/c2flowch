@@ -7,25 +7,36 @@
 use std::collections::BTreeMap;
 use unicode_width::UnicodeWidthStr;
 
+/// A cell as `(x, y)`: `x` grows to the right and `y` grows downwards.
 pub type Pt = (i32, i32);
 
 /// Line directions in a cell, as bits.
 pub const UP: u8 = 1;
+/// Line goes down.
 pub const DOWN: u8 = 2;
+/// Line goes left.
 pub const LEFT: u8 = 4;
+/// Line goes right.
 pub const RIGHT: u8 = 8;
 
+/// Direction of a move on the grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Dir {
+    /// Towards smaller `y`.
     Up,
+    /// Towards larger `y`.
     Down,
+    /// Towards smaller `x`.
     Left,
+    /// Towards larger `x`.
     Right,
 }
 
 impl Dir {
+    /// The four directions.
     pub const ALL: [Dir; 4] = [Dir::Up, Dir::Down, Dir::Left, Dir::Right];
 
+    /// Offset `(dx, dy)` of one step in this direction.
     pub fn delta(self) -> Pt {
         match self {
             Dir::Up => (0, -1),
@@ -35,6 +46,7 @@ impl Dir {
         }
     }
 
+    /// The bit of this direction in a line mask ([`UP`], [`DOWN`], [`LEFT`], [`RIGHT`]).
     pub fn bit(self) -> u8 {
         match self {
             Dir::Up => UP,
@@ -44,6 +56,7 @@ impl Dir {
         }
     }
 
+    /// The direction that points the other way.
     pub fn opposite(self) -> Dir {
         match self {
             Dir::Up => Dir::Down,
@@ -53,10 +66,12 @@ impl Dir {
         }
     }
 
+    /// Whether this direction is [`Dir::Up`] or [`Dir::Down`].
     pub fn vertical(self) -> bool {
         matches!(self, Dir::Up | Dir::Down)
     }
 
+    /// Position of this direction in [`Dir::ALL`].
     pub fn index(self) -> usize {
         self as usize
     }
@@ -73,6 +88,7 @@ impl Dir {
     }
 }
 
+/// The cell reached by one step from `p` in direction `d`.
 pub fn step(p: Pt, d: Dir) -> Pt {
     let (dx, dy) = d.delta();
     (p.0 + dx, p.1 + dy)
@@ -106,19 +122,26 @@ pub enum ShapeKind {
 pub const PAD: i32 = 3;
 /// Rows of a decision symbol, and the row of its side corners.
 pub const DECISION_H: i32 = 7;
+/// Row of the side corners of a decision symbol, counted from its top.
 pub const DECISION_MID: i32 = 3;
 /// Widest condition, in cells, that a decision shows on one line. Longer
 /// conditions wrap onto the rows above and below the middle one.
 pub const DECISION_LINE_MAX: i32 = 30;
 
+/// A symbol of the flowchart, placed on the grid.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shape {
+    /// Kind of symbol.
     pub kind: ShapeKind,
     /// Top-left cell.
     pub x: i32,
+    /// Top row.
     pub y: i32,
+    /// Width in cells.
     pub w: i32,
+    /// Height in cells.
     pub h: i32,
+    /// Lines of text, one per row.
     pub lines: Vec<String>,
 }
 
@@ -170,10 +193,12 @@ impl Shape {
         }
     }
 
+    /// Rightmost column of the symbol, included.
     pub fn right(&self) -> i32 {
         self.x + self.w - 1
     }
 
+    /// Bottom row of the symbol, included.
     pub fn bottom(&self) -> i32 {
         self.y + self.h - 1
     }
@@ -183,6 +208,7 @@ impl Shape {
         self.x + self.w / 2
     }
 
+    /// Whether the cell `p` is inside the symbol, borders included.
     pub fn contains(&self, p: Pt) -> bool {
         p.0 >= self.x && p.0 <= self.right() && p.1 >= self.y && p.1 <= self.bottom()
     }
@@ -262,14 +288,17 @@ pub enum End {
     Join,
 }
 
+/// An orthogonal flow line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Path {
     /// Corners of an orthogonal line, first to last.
     pub points: Vec<Pt>,
+    /// How the last cell is drawn.
     pub end: End,
 }
 
 impl Path {
+    /// Creates a path and simplifies its points.
     pub fn new(points: Vec<Pt>, end: End) -> Path {
         let mut p = Path { points, end };
         p.simplify();
@@ -331,10 +360,12 @@ impl Path {
         }
     }
 
+    /// Direction of the first segment, if the path has one.
     pub fn first_dir(&self) -> Option<Dir> {
         (self.points.len() >= 2).then(|| Dir::between(self.points[0], self.points[1]))
     }
 
+    /// Direction of the last segment, if the path has one.
     pub fn last_dir(&self) -> Option<Dir> {
         let n = self.points.len();
         (n >= 2).then(|| Dir::between(self.points[n - 2], self.points[n - 1]))
@@ -344,12 +375,16 @@ impl Path {
 /// Free text: branch labels ("True", "False") and `goto` labels.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label {
+    /// Column of the first character.
     pub x: i32,
+    /// Row of the text.
     pub y: i32,
+    /// The text.
     pub text: String,
 }
 
 impl Label {
+    /// Rightmost column of the text, included.
     pub fn right(&self) -> i32 {
         self.x + width(&self.text) - 1
     }
@@ -358,18 +393,24 @@ impl Label {
 /// The flowchart of one function, ready to be drawn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagram {
+    /// Name of the function.
     pub name: String,
+    /// Symbols of the flowchart.
     pub shapes: Vec<Shape>,
+    /// Flow lines between the symbols.
     pub paths: Vec<Path>,
+    /// Branch labels and `goto` labels.
     pub labels: Vec<Label>,
     /// Bounding box, both corners included.
     pub min: Pt,
+    /// Bottom-right corner of the bounding box.
     pub max: Pt,
     /// Jumps for which no route was found (and that are not drawn).
     pub unrouted: usize,
 }
 
 impl Diagram {
+    /// Creates a diagram and computes its bounding box.
     pub fn new(name: String, shapes: Vec<Shape>, paths: Vec<Path>, labels: Vec<Label>) -> Self {
         let mut d = Diagram {
             name,
@@ -410,10 +451,12 @@ impl Diagram {
         self.max = max;
     }
 
+    /// Number of columns of the bounding box.
     pub fn width(&self) -> i32 {
         self.max.0 - self.min.0 + 1
     }
 
+    /// Number of rows of the bounding box.
     pub fn height(&self) -> i32 {
         self.max.1 - self.min.1 + 1
     }

@@ -18,6 +18,7 @@ pub struct ParseOptions {
     pub title: String,
     /// Level of detail, from 1 (function calls only) to 5 (every statement).
     pub level: u8,
+    /// Language of the labels that c2flowch adds to the text.
     pub lang: Language,
 }
 
@@ -39,6 +40,7 @@ pub struct Warning {
     pub file: String,
     /// 1-based source line.
     pub line: usize,
+    /// Description of the problem.
     pub message: String,
 }
 
@@ -53,13 +55,16 @@ impl std::fmt::Display for Warning {
 pub struct Source<'a> {
     /// Name used in warnings, usually the path of the file.
     pub name: &'a str,
+    /// Source code of the file.
     pub code: &'a str,
 }
 
 /// Result of [`parse`].
 #[derive(Debug, Clone)]
 pub struct Parsed {
+    /// The program that was read.
     pub program: Program,
+    /// Everything that could not be drawn faithfully, in source order.
     pub warnings: Vec<Warning>,
 }
 
