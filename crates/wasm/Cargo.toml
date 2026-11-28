@@ -16,4 +16,5 @@ c2flowch-core.workspace = true
 wasm-bindgen = "=0.2.130"
 # tree-sitter-c 0.24.2 compiles the C library shims of this crate for
 # wasm32-unknown-unknown; 0.1.8 and later only work with tree-sitter 0.27.
+# See "Pinned dependencies" in PROJECT.md before changing it.
 tree-sitter-language = "=0.1.7"
