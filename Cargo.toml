@@ -7,7 +7,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "2.5.4"
+version = "2.5.5"
 authors = ["Israel Alberto Roldan Vega"]
 edition = "2024"
 rust-version = "1.88"
@@ -30,4 +30,4 @@ tempfile = "3.26.0"
 predicates = "3.1.4"
 insta = { version = "1.43", features = ["yaml"] }
 # crates.io needs the version: keep it equal to workspace.package.version.
-c2flowch-core = { path = "crates/core", version = "2.5.4" }
+c2flowch-core = { path = "crates/core", version = "2.5.5" }
