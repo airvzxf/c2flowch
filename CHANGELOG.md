@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.5.2
 
 ### Added
 
@@ -12,6 +12,13 @@
 - The demo sends a Content-Security-Policy and other security headers
   (`web/src/_headers`): it runs only its own scripts and WebAssembly,
   fetches only its own files and cannot be framed.
+
+### Changed
+
+- Dependencies updated: anyhow 1.0.105, clap 4.6.10, serde 1.0.229,
+  unicode-width 0.2.3, assert_cmd 2.2.2 and tempfile 3.27.0.
+- Dependabot opens weekly pull requests for GitHub Actions and Cargo
+  dependencies.
 
 ## 2.5.1
 

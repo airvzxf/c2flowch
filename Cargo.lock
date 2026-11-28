@@ -149,7 +149,7 @@ checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
 name = "c2flowch"
-version = "2.5.1"
+version = "2.5.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "c2flowch-core"
-version = "2.5.1"
+version = "2.5.2"
 dependencies = [
  "anyhow",
  "insta",
@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "c2flowch-wasm"
-version = "2.5.1"
+version = "2.5.2"
 dependencies = [
  "c2flowch-core",
  "tree-sitter-language",
