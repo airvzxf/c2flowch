@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Response headers for every path of the demo, read by Cloudflare Pages
+# (https://developers.cloudflare.com/pages/configuration/headers/).
+#
+# Content-Security-Policy: the page runs only its own scripts and
+# WebAssembly ('wasm-unsafe-eval' lets it compile the module, it does not
+# allow eval), fetches only its own files and cannot be framed. Styles
+# allow 'unsafe-inline' because the flowchart SVG and the 404 page carry
+# a <style> element.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
