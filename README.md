@@ -1,5 +1,9 @@
 # c2flowch: C to flowchart (ANSI/ISO 5807)
 
+[![crates.io](https://img.shields.io/crates/v/c2flowch.svg)](https://crates.io/crates/c2flowch)
+[![docs.rs](https://img.shields.io/docsrs/c2flowch-core)](https://docs.rs/c2flowch-core)
+[![CI](https://github.com/airvzxf/c2flowch/actions/workflows/ci.yml/badge.svg)](https://github.com/airvzxf/c2flowch/actions/workflows/ci.yml)
+
 **c2flowch** converts C source code into flowcharts with the ANSI/ISO 5807
 symbols, as plain ASCII text, SVG or PNG.
 
@@ -112,7 +116,7 @@ cargo install --locked --git https://github.com/airvzxf/c2flowch c2flowch
 ```
 
 The library is the [`c2flowch-core`](https://crates.io/crates/c2flowch-core)
-crate.
+crate; its API is documented on [docs.rs](https://docs.rs/c2flowch-core).
 
 ## Usage
 

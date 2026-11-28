@@ -30,6 +30,26 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # The documentation of the library crates, as docs.rs builds it:
+      # broken links and invalid HTML fail. The CLI's doc comments are its
+      # --help text, so it is left out.
+      - name: Documentation
+        run: cargo doc -p c2flowch-core -p c2flowch-wasm --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+      # crates.io needs the version of the c2flowch-core dependency in the
+      # root Cargo.toml; it must follow workspace.package.version.
+      - name: c2flowch-core dependency follows the workspace version
+        run: |
+          set -euo pipefail
+          meta="$(cargo metadata --format-version 1 --no-deps --locked)"
+          version="$(jq -r '.packages[] | select(.name == "c2flowch-core") | .version' <<<"${meta}")"
+          req="$(jq -r '.packages[] | select(.name == "c2flowch") | .dependencies[] | select(.name == "c2flowch-core") | .req' <<<"${meta}")"
+          if [ "${req}" != "^${version}" ]; then
+            echo "::error file=Cargo.toml::c2flowch-core is required as ${req}; set version = \"${version}\" in [workspace.dependencies]"
+            exit 1
+          fi
+          echo "✓ c2flowch-core ${req}"
 
   test:
     name: Test (${{ matrix.os }})

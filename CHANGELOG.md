@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Two links in the documentation of the `layout` module pointed to
+  private items and were broken on docs.rs.
+
+### Added
+
+- CI builds the library documentation with warnings as errors and checks
+  that the `c2flowch-core` dependency follows the workspace version.
+- README badges for crates.io, docs.rs and CI.
+
 ## 2.5.5
 
 ### Added
