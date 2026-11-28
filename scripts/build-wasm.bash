@@ -47,7 +47,10 @@ if [ "${TARGET}" = "web" ]; then
         version="${version}-${commit:0:7}"
     fi
     for file in web/src/*; do
-        sed "s/__VERSION__/${version}/g" "${file}" >"${site}/$(basename "${file}")"
+        case "${file}" in
+            *.png) cp "${file}" "${site}/" ;;
+            *) sed "s/__VERSION__/${version}/g" "${file}" >"${site}/$(basename "${file}")" ;;
+        esac
     done
     echo "Stamped the page with version ${version}"
 fi

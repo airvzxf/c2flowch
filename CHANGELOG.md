@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Links to the demo show a preview image: a C program next to its
+  flowchart.
+
 ## 2.5.1
 
 ### Added
