@@ -11,6 +11,8 @@
 //!
 //! The library does no I/O, so it can be built for WebAssembly.
 
+#![warn(missing_docs)]
+
 mod detail;
 pub mod i18n;
 pub mod ir;

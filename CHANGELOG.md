@@ -12,6 +12,8 @@
 - CI builds the library documentation with warnings as errors and checks
   that the `c2flowch-core` dependency follows the workspace version.
 - README badges for crates.io, docs.rs and CI.
+- API documentation for every public item of `c2flowch-core`; the crate
+  warns on missing docs, so the CI documentation check keeps it complete.
 
 ## 2.5.5
 
