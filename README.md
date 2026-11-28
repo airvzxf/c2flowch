@@ -102,11 +102,17 @@ The checksum shows that the download is complete; the attestation shows
 that the release workflow of this repository built the file (from
 version 2.5.4 on).
 
-To build from source you need Rust 1.88 or later:
+To build from source you need Rust 1.88 or later. Install the release
+from [crates.io](https://crates.io/crates/c2flowch), or the latest code
+from this repository:
 
 ```bash
+cargo install --locked c2flowch
 cargo install --locked --git https://github.com/airvzxf/c2flowch c2flowch
 ```
+
+The library is the [`c2flowch-core`](https://crates.io/crates/c2flowch-core)
+crate.
 
 ## Usage
 
@@ -236,5 +242,5 @@ the terms of the GNU Affero General Public License as published by the Free
 Software Foundation, either version 3 of the License, or (at your option)
 any later version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
 
-The IBM Plex Mono fonts in `resources/fonts` are distributed under the
-SIL Open Font License 1.1.
+The IBM Plex Mono fonts in `crates/cli/fonts` are distributed under the
+SIL Open Font License 1.1 (`crates/cli/fonts/OFL.txt`).

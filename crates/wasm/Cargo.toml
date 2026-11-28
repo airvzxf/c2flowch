@@ -6,6 +6,9 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Convert C source code into ANSI/ISO 5807 flowcharts (WebAssembly bindings)"
 publish = false
 

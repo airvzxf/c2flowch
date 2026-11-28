@@ -244,11 +244,9 @@ fn png(svg: &str) -> Result<Vec<u8>> {
     let mut fonts = usvg::fontdb::Database::new();
     fonts.load_system_fonts();
     // Embedded so that the image looks the same on every machine.
-    fonts
-        .load_font_data(include_bytes!("../../../resources/fonts/IBMPlexMono-Medium.ttf").to_vec());
-    fonts.load_font_data(include_bytes!("../../../resources/fonts/IBMPlexMono-Bold.ttf").to_vec());
-    fonts
-        .load_font_data(include_bytes!("../../../resources/fonts/IBMPlexMono-Italic.ttf").to_vec());
+    fonts.load_font_data(include_bytes!("../fonts/IBMPlexMono-Medium.ttf").to_vec());
+    fonts.load_font_data(include_bytes!("../fonts/IBMPlexMono-Bold.ttf").to_vec());
+    fonts.load_font_data(include_bytes!("../fonts/IBMPlexMono-Italic.ttf").to_vec());
     fonts.set_monospace_family("IBM Plex Mono");
     fonts.set_sans_serif_family("IBM Plex Mono");
     let opt = usvg::Options {

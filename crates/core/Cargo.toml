@@ -6,6 +6,12 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+# The tests read the samples in resources/, outside the package.
+exclude = ["tests/"]
 description = "Convert C source code into ANSI/ISO 5807 flowcharts (library)"
 
 [dependencies]

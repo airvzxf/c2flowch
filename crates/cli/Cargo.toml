@@ -2,8 +2,15 @@
 name = "c2flowch"
 version.workspace = true
 authors.workspace = true
-license.workspace = true
+# The embedded IBM Plex Mono fonts (fonts/) are under the OFL.
+license = "AGPL-3.0-or-later AND OFL-1.1"
 repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+# The tests read the samples in resources/, outside the package.
+exclude = ["tests/"]
 edition.workspace = true
 rust-version.workspace = true
 description = "Convert C source code into ANSI/ISO 5807 flowcharts (command line)"

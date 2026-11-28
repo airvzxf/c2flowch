@@ -13,6 +13,9 @@ edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/airvzxf/c2flowch"
+homepage = "https://c2flowch.rovisoft.net/"
+keywords = ["flowchart", "c", "iso-5807", "diagram", "svg"]
+categories = ["command-line-utilities", "visualization", "development-tools"]
 
 [workspace.dependencies]
 anyhow = "1.0.102"
@@ -26,4 +29,5 @@ assert_cmd = "2.1.2"
 tempfile = "3.26.0"
 predicates = "3.1.4"
 insta = { version = "1.43", features = ["yaml"] }
-c2flowch-core = { path = "crates/core" }
+# crates.io needs the version: keep it equal to workspace.package.version.
+c2flowch-core = { path = "crates/core", version = "2.5.4" }
