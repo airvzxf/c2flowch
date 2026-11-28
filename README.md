@@ -4,7 +4,7 @@
 symbols, as plain ASCII text, SVG or PNG.
 
 Try it in the browser, nothing to install:
-<https://airvzxf.github.io/c2flowch/>.
+<https://c2flowch.rovisoft.net/>.
 
 ```c
 int main() {
@@ -181,8 +181,10 @@ open it. Every asset URL of the page carries `?v=<version>-<commit>`, such
 as `?v=2.5.0-c209660`, so browsers and caches fetch the new files after
 each deployment, whatever cache lifetime the server sends.
 
-The demo is deployed to GitHub Pages by the release workflow. To host it
-elsewhere, `scripts/cloudflare-build.bash` builds `web/` on a machine that
+The demo at <https://c2flowch.rovisoft.net/> runs on Cloudflare Pages
+and follows the main branch. The release workflow also deploys the
+latest release to GitHub Pages (<https://airvzxf.github.io/c2flowch/>).
+To host it elsewhere, `scripts/cloudflare-build.bash` builds `web/` on a machine that
 only has `cc`, `curl` and `tar`: it downloads Rust, clang (wasi-sdk) and
 wasm-bindgen when they are missing. On Cloudflare Pages, connect the
 repository with the build command `bash scripts/cloudflare-build.bash`
