@@ -87,6 +87,27 @@ globals:
 - prep: int values[LIMIT]
 ```
 
+## Install
+
+Download the archive for your system from the
+[releases](https://github.com/airvzxf/c2flowch/releases) and check it
+before you unpack it:
+
+```bash
+sha256sum -c c2flowch-v<version>-x86_64-unknown-linux-gnu.tar.gz.sha256
+gh attestation verify c2flowch-v<version>-x86_64-unknown-linux-gnu.tar.gz -R airvzxf/c2flowch
+```
+
+The checksum shows that the download is complete; the attestation shows
+that the release workflow of this repository built the file (from
+version 2.5.4 on).
+
+To build from source you need Rust 1.88 or later:
+
+```bash
+cargo install --locked --git https://github.com/airvzxf/c2flowch c2flowch
+```
+
 ## Usage
 
 ```bash
