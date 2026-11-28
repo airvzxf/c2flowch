@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Structured layout: IR -> [`Diagram`].
 //!
-//! Every statement becomes a [`Block`]: a rectangle of cells whose flow
+//! Every statement becomes a `Block`: a rectangle of cells whose flow
 //! enters at the top of column 0 and leaves at the bottom of column 0.
 //! Control structures are built from the blocks of their children, so the
 //! normal flow never needs a search. Only jumps (`break`, `continue`,
-//! `goto`) are routed afterwards, by [`route`], around what is already
+//! `goto`) are routed afterwards, by `route`, around what is already
 //! drawn.
 //!
 //! Conventions, the same as the classic hand-drawn style:
