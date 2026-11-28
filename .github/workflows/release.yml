@@ -175,10 +175,10 @@ jobs:
           if [ "${stamp#*-}" != "${tag_commit:0:7}" ]; then
             echo "::notice::Production serves commit ${stamp#*-}, not the tag commit ${tag_commit:0:7}: main moved after the tag."
           fi
-          for path in style.css app.js favicon.svg pkg/c2flowch_wasm.js pkg/c2flowch_wasm_bg.wasm examples/if.c; do
+          for path in style.css app.js favicon.svg og.png pkg/c2flowch_wasm.js pkg/c2flowch_wasm_bg.wasm examples/if.c; do
             type="$(curl -fsS --max-time 20 -o /dev/null -w '%{content_type}' "${SITE}/${path}?v=${stamp}")"
             case "${path}:${type}" in
-              *.css:text/css* | *.js:*javascript* | *.svg:image/svg+xml* | *.wasm:application/wasm* | *.c:text/*) echo "✓ /${path} (${type})" ;;
+              *.css:text/css* | *.js:*javascript* | *.svg:image/svg+xml* | *.png:image/png* | *.wasm:application/wasm* | *.c:text/*) echo "✓ /${path} (${type})" ;;
               *) echo "::error::/${path}?v=${stamp} answered ${type}"; exit 1 ;;
             esac
           done

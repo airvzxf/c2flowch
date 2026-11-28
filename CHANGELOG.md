@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Links to the demo show a preview image: a C program next to its
+  flowchart.
+
 ### Security
 
 - The demo sends a Content-Security-Policy and other security headers
