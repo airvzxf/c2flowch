@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- The `c2flowch` and `c2flowch-core` crates are published to crates.io
+  by the release workflow (`cargo install --locked c2flowch`).
+- `SECURITY.md`: how to report a vulnerability privately and how to check
+  a download.
+- CodeQL scans the Rust sources and the workflows.
+
+### Changed
+
+- The embedded IBM Plex Mono fonts moved from `resources/fonts` to
+  `crates/cli/fonts`, with the text of their license (`OFL.txt`).
+
 ## 2.5.4
 
 ### Added

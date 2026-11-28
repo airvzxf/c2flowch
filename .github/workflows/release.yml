@@ -4,7 +4,8 @@
 # package, attaches the archives to the GitHub release and deploys the
 # browser demo (web/) to GitHub Pages when enabled (see the pages job).
 # On a published release it also checks the demo on Cloudflare Pages
-# (see the verify-deployment job). Runs when a release is published, or
+# (see the verify-deployment job) and publishes the crates to crates.io
+# (see the crates-io job). Runs when a release is published, or
 # by hand for an existing tag.
 name: Release
 
@@ -214,3 +215,41 @@ jobs:
           echo "✓ ${csp%$'\r'}"
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Publishes c2flowch-core and then c2flowch to crates.io with trusted
+  # publishing: crates.io trusts this workflow (configured on crates.io
+  # for each crate), so no token is stored in the repository. A version
+  # already on crates.io is skipped, so the job can be run again.
+  crates-io:
+    name: Publish to crates.io
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+        id: auth
+      - name: Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          for crate in c2flowch-core c2flowch; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' \
+              -A 'c2flowch-release (https://github.com/airvzxf/c2flowch)' \
+              "https://crates.io/api/v1/crates/${crate}/${version}")"
+            if [ "${status}" = 200 ]; then
+              echo "✓ ${crate} ${version} is already on crates.io"
+              continue
+            fi
+            cargo publish --locked -p "${crate}"
+          done
